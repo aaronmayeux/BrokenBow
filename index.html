@@ -13,12 +13,13 @@
 
   <link rel="stylesheet" href="css/style.css" />
 
-  <!-- set theme + enable JS-only styles before first paint (no flash) -->
+  <!-- set theme + enable JS-only styles before first paint (no flash).
+       Light "daylight" is the DEFAULT; campfire is manual + remembered only. -->
   <script>
     (function () {
       var e = document.documentElement; e.className += " js";
-      var t; try { t = localStorage.getItem("bb_theme"); } catch (_) {}
-      if (!t) { var h = new Date().getHours(); t = (h >= 19 || h < 7) ? "night" : "day"; }
+      var t = null; try { t = localStorage.getItem("bb_theme"); } catch (_) {}
+      if (t !== "night" && t !== "day") t = "day";
       e.setAttribute("data-theme", t);
     })();
   </script>
@@ -73,71 +74,118 @@
     </section>
   </div>
 
-  <!-- ===== sections (filled by app.js) ===== -->
+  <!-- ===== trip-wide no-cell banner (replaces repeated per-card notes) ===== -->
+  <div class="wrap">
+    <p class="banner" id="banner" role="note">No cell service at the cabin or most trails &mdash; screenshot your maps before you head out.</p>
+  </div>
+
+  <!-- ===== TODAY + countdown stay open at the top; everything below collapses ===== -->
   <section id="sec-today"><div class="wrap reveal">
     <div class="section-title"><span class="num">1</span><h2>Today</h2></div>
     <div id="today"></div>
   </div></section>
 
-  <section id="sec-weather"><div class="wrap reveal">
-    <div class="section-title"><span class="num">2</span><h2>Hochatown Weather</h2></div>
-    <div id="weather"><p class="muted">Loading current conditions&hellip;</p></div>
+  <section id="sec-weather"><div class="wrap">
+    <details class="acc" open>
+      <summary class="section-title"><span class="num">2</span><h2>Hochatown Weather</h2></summary>
+      <div class="acc-body reveal">
+        <div id="weather"><p class="muted">Loading current conditions&hellip;</p></div>
+      </div>
+    </details>
   </div></section>
 
-  <section id="sec-drive"><div class="wrap reveal">
-    <div class="section-title"><span class="num">3</span><h2>The Drive Up</h2></div>
-    <div id="drive"></div>
+  <section id="sec-drive"><div class="wrap">
+    <details class="acc">
+      <summary class="section-title"><span class="num">3</span><h2>The Drive Up</h2></summary>
+      <div class="acc-body reveal">
+        <div id="drive"></div>
+      </div>
+    </details>
   </div></section>
 
-  <section id="sec-stay"><div class="wrap reveal">
-    <div class="section-title"><span class="num">4</span><h2>The Stay</h2></div>
-    <p class="lead">One easy anchor outing a day, then home for the pool, hot tub, firepit and grill.</p>
-    <div id="stay" class="grid"></div>
+  <section id="sec-stay"><div class="wrap">
+    <details class="acc">
+      <summary class="section-title"><span class="num">4</span><h2>The Stay</h2></summary>
+      <div class="acc-body reveal">
+        <p class="lead">One easy anchor outing a day, then home for the pool, hot tub, firepit and grill.</p>
+        <div id="stay" class="grid"></div>
+      </div>
+    </details>
   </div></section>
 
-  <section id="sec-activities"><div class="wrap reveal">
-    <div class="section-title"><span class="num">5</span><h2>Activities &amp; Voting</h2></div>
-    <p class="lead">Tap a family member's circle to cast their vote. Votes save on this device.</p>
-    <div id="activities" class="grid"></div>
+  <section id="sec-activities"><div class="wrap">
+    <details class="acc">
+      <summary class="section-title"><span class="num">5</span><h2>Activities &amp; Voting</h2></summary>
+      <div class="acc-body reveal">
+        <p class="lead">Tap a family member's circle to cast their vote. Votes save on this device.</p>
+        <div id="activities" class="grid"></div>
+      </div>
+    </details>
   </div></section>
 
-  <section id="sec-eat"><div class="wrap reveal">
-    <div class="section-title"><span class="num">6</span><h2>Where to Eat</h2></div>
-    <p class="lead">"Open now" is best-effort &mdash; call ahead on the dashed ones.</p>
-    <div id="eat" class="grid"></div>
+  <section id="sec-eat"><div class="wrap">
+    <details class="acc">
+      <summary class="section-title"><span class="num">6</span><h2>Where to Eat</h2></summary>
+      <div class="acc-body reveal">
+        <p class="lead">"Open now" is best-effort &mdash; call ahead on the dashed ones. Filter by cuisine below.</p>
+        <div class="filter-row" id="eat-filter"></div>
+        <div id="eat" class="grid"></div>
+      </div>
+    </details>
   </div></section>
 
-  <section id="sec-shop"><div class="wrap reveal">
-    <div class="section-title"><span class="num">7</span><h2>Provisions</h2></div>
-    <p class="lead">Stock the cabin at Pruett's on the way in &mdash; it's right on the route.</p>
-    <div id="shop" class="grid"></div>
+  <section id="sec-shop"><div class="wrap">
+    <details class="acc">
+      <summary class="section-title"><span class="num">7</span><h2>Provisions</h2></summary>
+      <div class="acc-body reveal">
+        <p class="lead">Stock the cabin at Pruett's on the way in &mdash; it's right on the route.</p>
+        <div id="shop" class="grid"></div>
+      </div>
+    </details>
   </div></section>
 
-  <section id="sec-home"><div class="wrap reveal">
-    <div class="section-title"><span class="num">8</span><h2>The Scenic Way Home</h2></div>
-    <p class="lead">Two nights, three states, and one stop that's just for us.</p>
-    <div id="home"></div>
+  <section id="sec-home"><div class="wrap">
+    <details class="acc">
+      <summary class="section-title"><span class="num">8</span><h2>The Scenic Way Home</h2></summary>
+      <div class="acc-body reveal">
+        <p class="lead">Two nights, three states, and one stop that's just for us.</p>
+        <div id="home"></div>
+      </div>
+    </details>
   </div></section>
 
-  <section id="sec-pack"><div class="wrap reveal">
-    <div class="section-title"><span class="num">9</span><h2>Packing</h2></div>
-    <div id="packing"></div>
+  <section id="sec-pack"><div class="wrap">
+    <details class="acc">
+      <summary class="section-title"><span class="num">9</span><h2>Packing</h2></summary>
+      <div class="acc-body reveal">
+        <div id="packing"></div>
+      </div>
+    </details>
   </div></section>
 
-  <section id="sec-hunt"><div class="wrap reveal">
-    <div class="section-title"><span class="num">10</span><h2>Kids' Scavenger Hunt</h2></div>
-    <div id="scavenger"></div>
+  <section id="sec-hunt"><div class="wrap">
+    <details class="acc">
+      <summary class="section-title"><span class="num">10</span><h2>Kids' Scavenger Hunt</h2></summary>
+      <div class="acc-body reveal">
+        <div id="scavenger"></div>
+      </div>
+    </details>
   </div></section>
 
-  <section id="sec-fun"><div class="wrap reveal spinner-box">
-    <div class="section-title"><span class="num">11</span><h2>Can't Decide on Dinner?</h2></div>
-    <button class="spin-btn" id="spinBtn" type="button">Spin the wheel</button>
-    <div class="spin-result" id="spinResult"></div>
+  <section id="sec-fun"><div class="wrap">
+    <details class="acc">
+      <summary class="section-title"><span class="num">11</span><h2>Can't Decide on Dinner?</h2></summary>
+      <div class="acc-body reveal spinner-box">
+        <button class="spin-btn" id="spinBtn" type="button">Spin the wheel</button>
+        <div class="spin-result" id="spinResult"></div>
+      </div>
+    </details>
   </div></section>
 
   <footer>
     <div class="wrap">
       <p>Broken Bow 2026 &middot; Built for Lucia, Zelphia, Melania &amp; Siena.</p>
+      <p class="fineprint">Ratings are Google snapshots (as of May 2026) &mdash; tap any Maps link for the live number. Prices are approximate &mdash; confirm at the door. Hours are best-effort; call ahead on the dashed ones.</p>
       <p style="margin-top:4px">No cell service at the cabin &mdash; screenshot your maps. &copy; <span id="year">2026</span></p>
     </div>
   </footer>
