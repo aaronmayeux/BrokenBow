@@ -424,12 +424,19 @@ footer { text-align: center; padding: 30px 0 50px; color: var(--muted); font-siz
   display: flex; align-items: center; gap: 6px; background: var(--surface-2);
   border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px 5px 10px;
   font-family: "Bitter", serif;
+  min-height: 32px; box-sizing: border-box;   /* same height whether crown shows or not */
 }
 .sc-player.lead { background: var(--brand); border-color: var(--brand); color: #fff; }
-.sc-crown { color: var(--gold); font-size: .95rem; flex: none; }
-.sc-crown--off { visibility: hidden; }   /* reserve the slot so every chip is the same size */
+/* Box the crown into a fixed square with clamped line-height so the glyph's
+   metrics can't inflate the leader row taller than the others. */
+.sc-crown {
+  color: var(--gold); flex: none; font-size: .95rem; line-height: 1;
+  width: 1em; height: 1em; display: inline-flex;
+  align-items: center; justify-content: center; overflow: hidden;
+}
+.sc-crown--off { visibility: hidden; }   /* reserve the slot so every chip is the same width */
 .sc-player.lead .sc-crown { color: #ffe9b0; }
-.sc-name { font-weight: 600; font-size: .9rem; }
+.sc-name { font-weight: 600; font-size: .9rem; line-height: 1; }
 .sc-pts { font-weight: 800; font-size: 1rem; min-width: 1.2em; text-align: center; }
 .sc-player.pop { animation: scPop .42s ease; }
 @keyframes scPop { 0% { transform: scale(1); } 35% { transform: scale(1.18); } 100% { transform: scale(1); } }
@@ -529,51 +536,30 @@ footer { text-align: center; padding: 30px 0 50px; color: var(--muted); font-siz
   .cd-num.flip { animation: bbFlip .34s cubic-bezier(.4,.7,.3,1) both; transform-origin: top center; }
 }
 
-/* ---------- 2. Armada silhouette in the hero ------------------------------ */
-.armada-wrap { margin: 10px auto 2px; max-width: 200px; line-height: 0; }
-.armada { width: 100%; height: auto; opacity: .9; }
-.armada path:not([fill]), .armada rect:not([fill]), .armada circle:not([fill]) { fill: var(--brand); }
-@media (prefers-reduced-motion: no-preference) {
-  .armada { animation: bbDriveIn .9s cubic-bezier(.2,.7,.3,1) both; }
-  @keyframes bbDriveIn { from { transform: translateX(-26px); opacity: 0; } to { transform: translateX(0); opacity: .9; } }
+/* ---------- 2. static pine silhouettes down the left margin ----------------
+   (Replaces the rejected scroll-trail and the rejected tire tracks.) A faint
+   repeating pine, masked so it tints to the theme color and follows day/
+   campfire. No animation — purely decorative; sits in the gutter. */
+body::before {
+  content: ""; position: fixed; top: 0; bottom: 0; left: 0; width: 24px;
+  z-index: 0; pointer-events: none; opacity: .09;
+  background-color: var(--brand);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 96'%3E%3Cpath d='M20 4 L30 24 L24 24 L33 40 L26 40 L34 56 L6 56 L14 40 L7 40 L16 24 L10 24 Z'/%3E%3Crect x='18' y='56' width='4' height='8'/%3E%3C/svg%3E") repeat-y top left / 22px auto;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 96'%3E%3Cpath d='M20 4 L30 24 L24 24 L33 40 L26 40 L34 56 L6 56 L14 40 L7 40 L16 24 L10 24 Z'/%3E%3Crect x='18' y='56' width='4' height='8'/%3E%3C/svg%3E") repeat-y top left / 22px auto;
 }
-
-/* ---------- 3. tire tracks down the side (replaces the old trail) ----------
-   Two faint tracks with tread rungs that "roll" as you scroll — a subtle nod
-   to the Armada driving up. Scroll-driven, so gated twice (supports + motion). */
-@supports (animation-timeline: scroll()) {
-  @media (prefers-reduced-motion: no-preference) {
-    body::before, body::after {
-      content: ""; position: fixed; top: 0; bottom: 0; width: 6px;
-      z-index: 3; pointer-events: none; opacity: .12;
-      background: repeating-linear-gradient(180deg,
-        var(--brand) 0 7px, transparent 7px 16px);
-      animation: bbTread linear both; animation-timeline: scroll(root);
-    }
-    body::before { left: 7px; }
-    body::after  { left: 18px; }
-  }
-}
-@keyframes bbTread { to { background-position-y: 240px; } }
-@media print { body::before, body::after { display: none !important; } }
+@media print { body::before { display: none !important; } }
 @media (max-width: 480px) {
-  body::before { left: 3px; }
-  body::after  { left: 13px; }
+  body::before { width: 18px; opacity: .07; -webkit-mask-size: 16px auto; mask-size: 16px auto; }
 }
 
-/* ---------- 4. accordion expand/collapse — animates EVERY open & close -----
-   Native interpolate-size + ::details-content. No JS, fires both ways every
-   time. Unsupported browsers just snap open like before. */
-@supports (interpolate-size: allow-keywords) {
-  @media (prefers-reduced-motion: no-preference) {
-    :root { interpolate-size: allow-keywords; }
-    details.acc::details-content {
-      block-size: 0; overflow: clip;
-      transition: block-size .32s ease, content-visibility .32s allow-discrete;
-    }
-    details.acc[open]::details-content { block-size: auto; }
-  }
+/* ---------- 4. accordion expand/collapse — JS-driven height animation -------
+   app.js animates .acc-body's inline height on every open AND close (works on
+   all browsers, unlike the old ::details-content approach). CSS just supplies
+   the easing + clips the body while it's mid-animation. */
+@media (prefers-reduced-motion: no-preference) {
+  .acc-body { transition: height .3s ease; }
 }
+.acc-body.acc-animating { overflow: hidden; }
 
 /* ---------- 5. View Transitions (vote-driven itinerary reshape only) ------- */
 ::view-transition-old(root),
@@ -592,8 +578,9 @@ footer { text-align: center; padding: 30px 0 50px; color: var(--muted); font-siz
 .voter.on { transform: scale(1.08); }
 @media (prefers-reduced-motion: no-preference) {
   .voter:active, .filter-chip:active { transform: scale(.86); }
-  .check:active, .meal-toggle:active { transform: scale(.97); }
-  .check, .meal-toggle { transition: transform .12s ease; }
+  /* NOTE: no press-scale on .check / .meal-toggle — transforming the label
+     shifts the native checkbox's tap target on mobile so the box itself won't
+     toggle. The check-pop below is the feedback instead. */
   /* satisfying pop when a box gets checked (class toggled in app.js) */
   .check.done span { animation: bbCheckPop .26s ease; }
   @keyframes bbCheckPop { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
@@ -605,4 +592,4 @@ footer { text-align: center; padding: 30px 0 50px; color: var(--muted); font-siz
   margin: 4px 0 8px; display: flex; align-items: center; gap: 8px;
 }
 .route-divider { height: 1px; background: var(--line); margin: 22px 0; }
-.spin-pick { font-weight: 700; }
+.spin-pick { font-weight: 700; font-size: inherit; margin-top: 0; }
