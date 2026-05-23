@@ -139,6 +139,7 @@
   var VOTERS = TRIP.family.filter(function (f) { return !f.age || f.age >= 4; });
   var activitiesBound = false; // bind the voting click handler only once
   var eatBound = false;        // bind the restaurant voting/filter handlers only once
+  var renderedOnce = {};       // per-section guard: first render animates, re-renders reveal instantly
   /* every activity id a given person is currently "in" for, from the votes map */
   function picksFor(name, v) { var out = []; for (var id in v) { if (v[id] && v[id].indexOf(name) >= 0) out.push(id); } return out; }
   function pushPersonVotes(name, v) { if (window.BBSync) BBSync.pushVotes(name.toLowerCase(), name, picksFor(name, v)); }
@@ -276,6 +277,7 @@
     var plan = currentPlan();
     var note = '<p class="plan-note">Auto-built from everyone\u2019s votes \u2014 vote in <strong>Activities</strong> and <strong>Where to Eat</strong> to reshape it. Days a place is closed are skipped automatically.</p>';
     $("stay").innerHTML = note + STAY_DAYS.map(function (d) { return dayCard(d, plan); }).join("");
+    if (renderedOnce.stay) revealWithin($("stay")); else renderedOnce.stay = true;
   }
 
   /* --- activities + per-person voting --- */
@@ -316,6 +318,9 @@
         safe(renderStay); safe(renderToday); // votes reshape the auto-built itinerary
       });
     }
+    // Re-renders (e.g. a synced vote) build fresh hidden .reveal cards the boot
+    // observer never saw — reveal them now so the section can't go blank.
+    if (renderedOnce.activities) revealWithin($("activities")); else renderedOnce.activities = true;
   }
 
   /* pull shared votes from Firestore -> rebuild the local votes map -> re-render.
@@ -393,6 +398,7 @@
         safe(renderStay); safe(renderToday); // votes reshape the dinner plan
       });
     }
+    if (renderedOnce.eat) revealWithin($("eat")); else renderedOnce.eat = true;
   }
 
   /* --- provisions --- */
