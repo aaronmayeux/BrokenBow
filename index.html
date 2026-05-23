@@ -38,10 +38,12 @@
         <a href="#sec-activities">Activities</a>
         <a href="#sec-eat">Eat</a>
         <a href="#sec-shop">Provisions</a>
+        <a href="#sec-kitchen">Kitchen</a>
         <a href="#sec-home">Way Home</a>
         <a href="#sec-pack">Packing</a>
         <a href="#sec-hunt">Hunt</a>
       </nav>
+      <button class="theme-toggle" id="printBtn" type="button">Print plan</button>
       <button class="theme-toggle" id="themeToggle" type="button">Campfire</button>
     </div>
   </header>
@@ -144,9 +146,18 @@
     </details>
   </div></section>
 
+  <section id="sec-kitchen"><div class="wrap">
+    <details class="acc">
+      <summary class="section-title"><span class="num">8</span><h2>Cabin Kitchen</h2></summary>
+      <div class="acc-body reveal">
+        <div id="kitchen"></div>
+      </div>
+    </details>
+  </div></section>
+
   <section id="sec-home"><div class="wrap">
     <details class="acc">
-      <summary class="section-title"><span class="num">8</span><h2>The Scenic Way Home</h2></summary>
+      <summary class="section-title"><span class="num">9</span><h2>The Scenic Way Home</h2></summary>
       <div class="acc-body reveal">
         <p class="lead">Two nights, three states, and one stop that's just for us.</p>
         <div id="home"></div>
@@ -156,7 +167,7 @@
 
   <section id="sec-pack"><div class="wrap">
     <details class="acc">
-      <summary class="section-title"><span class="num">9</span><h2>Packing</h2></summary>
+      <summary class="section-title"><span class="num">10</span><h2>Packing</h2></summary>
       <div class="acc-body reveal">
         <div id="packing"></div>
       </div>
@@ -165,7 +176,7 @@
 
   <section id="sec-hunt"><div class="wrap">
     <details class="acc">
-      <summary class="section-title"><span class="num">10</span><h2>Kids' Scavenger Hunt</h2></summary>
+      <summary class="section-title"><span class="num">11</span><h2>Kids' Scavenger Hunt</h2></summary>
       <div class="acc-body reveal">
         <div id="scavenger"></div>
       </div>
@@ -174,7 +185,7 @@
 
   <section id="sec-fun"><div class="wrap">
     <details class="acc">
-      <summary class="section-title"><span class="num">11</span><h2>Can't Decide on Dinner?</h2></summary>
+      <summary class="section-title"><span class="num">12</span><h2>Can't Decide on Dinner?</h2></summary>
       <div class="acc-body reveal spinner-box">
         <button class="spin-btn" id="spinBtn" type="button">Spin the wheel</button>
         <div class="spin-result" id="spinResult"></div>
@@ -189,6 +200,9 @@
       <p style="margin-top:4px">No cell service at the cabin &mdash; screenshot your maps. &copy; <span id="year">2026</span></p>
     </div>
   </footer>
+
+  <!-- print-only "the plan" sheet — built by app.js, shown only via @media print -->
+  <div id="print-sheet" aria-hidden="true"></div>
 
   <canvas id="confetti" aria-hidden="true"></canvas>
 
