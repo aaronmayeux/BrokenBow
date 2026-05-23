@@ -135,6 +135,13 @@
   function save(key, o) { try { localStorage.setItem(key, JSON.stringify(o)); } catch (e) {} }
   var VKEY = "bb_votes_v1", PKEY = "bb_packing_v1", SKEY = "bb_scavenger_v1", TKEY = "bb_theme", KKEY = "bb_kitchen_v1";
 
+  /* voters = family minus the 1-yr-old → Aaron, Lucia, Zelphia, Melania */
+  var VOTERS = TRIP.family.filter(function (f) { return !f.age || f.age >= 4; });
+  var activitiesBound = false; // bind the voting click handler only once
+  /* every activity id a given person is currently "in" for, from the votes map */
+  function picksFor(name, v) { var out = []; for (var id in v) { if (v[id] && v[id].indexOf(name) >= 0) out.push(id); } return out; }
+  function pushPersonVotes(name, v) { if (window.BBSync) BBSync.pushVotes(name.toLowerCase(), name, picksFor(name, v)); }
+
   /* =========================================================================
      RENDERERS
      ======================================================================= */
@@ -265,7 +272,7 @@
     var votes = load(VKEY);
     $("activities").innerHTML = ACTIVITIES.map(function (a) {
       var anchor = a.defaultDay ? '<span class="badge-day">' + dayLabel(a.defaultDay) + " anchor</span>" : "";
-      var voters = TRIP.family.map(function (f) {
+      var voters = VOTERS.map(function (f) {
         var on = (votes[a.id] || []).indexOf(f.name) >= 0;
         return '<button class="voter ' + (on ? "on" : "") + '" data-act="' + a.id + '" data-person="' +
           esc(f.name) + '" title="' + esc(f.name) + '">' + esc(f.name.charAt(0)) + "</button>";
@@ -282,16 +289,39 @@
         '<a class="dir" href="' + mapsPlaceUrl(a) + '" target="_blank" rel="noopener">View on Maps ↗</a></article>';
     }).join("");
 
-    $("activities").addEventListener("click", function (e) {
-      var b = e.target.closest(".voter"); if (!b) return;
-      var act = b.dataset.act, person = b.dataset.person, v = load(VKEY);
-      v[act] = v[act] || [];
-      var i = v[act].indexOf(person);
-      if (i >= 0) v[act].splice(i, 1); else v[act].push(person);
+    if (!activitiesBound) {
+      activitiesBound = true;
+      $("activities").addEventListener("click", function (e) {
+        var b = e.target.closest(".voter"); if (!b) return;
+        var act = b.dataset.act, person = b.dataset.person, v = load(VKEY);
+        v[act] = v[act] || [];
+        var i = v[act].indexOf(person);
+        if (i >= 0) v[act].splice(i, 1); else v[act].push(person);
+        save(VKEY, v);
+        b.classList.toggle("on");
+        var t = document.querySelector('[data-tally="' + act + '"]');
+        if (t) t.textContent = v[act].length + " vote" + (v[act].length === 1 ? "" : "s");
+        pushPersonVotes(person, v); // mirror this person's picks to everyone's phone
+      });
+    }
+  }
+
+  /* pull shared votes from Firestore -> rebuild the local votes map -> re-render.
+     Safe no-op when Firebase is missing/offline: the app stays fully local. */
+  function initSync() {
+    if (!window.BBSync) return;
+    var voterNames = VOTERS.map(function (f) { return f.name; });
+    BBSync.onVotes(function (docs) {
+      var v = {};
+      docs.forEach(function (d) {
+        if (voterNames.indexOf(d.name) < 0) return; // ignore non-voters / stale docs
+        (d.picks || []).forEach(function (actId) {
+          v[actId] = v[actId] || [];
+          if (v[actId].indexOf(d.name) < 0) v[actId].push(d.name);
+        });
+      });
       save(VKEY, v);
-      b.classList.toggle("on");
-      var t = document.querySelector('[data-tally="' + act + '"]');
-      if (t) t.textContent = v[act].length + " vote" + (v[act].length === 1 ? "" : "s");
+      safe(renderActivities); // delegated listener already bound once -> safe to re-render
     });
   }
 
@@ -685,6 +715,7 @@
     safe(renderDriveUp);
     safe(renderStay);
     safe(renderActivities);
+    safe(initSync);
     safe(renderEat);
     safe(renderShop);
     safe(renderKitchen);
