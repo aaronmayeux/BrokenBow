@@ -507,3 +507,64 @@ footer { text-align: center; padding: 30px 0 50px; color: var(--muted); font-siz
   letter-spacing: .03em; text-transform: uppercase; color: var(--accent);
   border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; white-space: nowrap;
 }
+
+/* ============================================================
+   MOTION PASS (#32) — native browser APIs only, no libraries.
+   • Scroll-driven trail + nav elevation are @supports-gated and
+     only run for users who haven't asked for reduced motion, so
+     unsupported browsers AND reduced-motion users get the static
+     UI untouched.
+   • View Transitions are wrapped in app.js (withVT); this block
+     just tunes the cross-fade and kills it for reduced motion.
+   All of this caches cleanly offline (pure CSS).
+   ============================================================ */
+
+/* --- View Transitions: gentle default cross-fade; off for reduced motion --- */
+::view-transition-old(root),
+::view-transition-new(root) { animation-duration: .28s; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none !important; }
+}
+
+@keyframes bbTrailDraw { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes bbNavElevate {
+  to { box-shadow: 0 6px 20px var(--shadow); border-bottom-color: var(--brand); }
+}
+
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    /* faint dashed field-guide "trail" track down the left margin */
+    body::before {
+      content: ""; position: fixed; left: 7px; top: 64px; bottom: 16px; width: 0;
+      border-left: 2px dashed var(--line); opacity: .55;
+      z-index: 30; pointer-events: none;
+    }
+    /* the trail "draws" itself as the page scrolls (scroll-progress timeline) */
+    body::after {
+      content: ""; position: fixed; left: 6px; top: 64px; width: 4px;
+      height: calc(100vh - 80px);
+      background: linear-gradient(180deg, var(--brand) 0%, var(--accent) 100%);
+      border-radius: 2px; transform-origin: top center; transform: scaleY(0);
+      z-index: 31; pointer-events: none;
+      animation: bbTrailDraw linear both;
+      animation-timeline: scroll(root);
+    }
+    /* sticky nav gains a soft shadow as you scroll off the hero */
+    .nav {
+      animation: bbNavElevate linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 140px;
+    }
+  }
+}
+
+/* never print the decorative trail */
+@media print { body::before, body::after { display: none !important; } }
+
+/* tuck the trail flush to the edge on small screens so it never crowds content */
+@media (max-width: 480px) {
+  body::before { left: 3px; }
+  body::after  { left: 2px; }
+}
