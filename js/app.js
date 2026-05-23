@@ -317,7 +317,7 @@
         var t = document.querySelector('[data-tally="' + act + '"]');
         if (t) t.textContent = v[act].length + " vote" + (v[act].length === 1 ? "" : "s");
         pushPersonVotes(person, v); // mirror this person's picks to everyone's phone
-        safe(renderStay); safe(renderToday); // votes reshape the auto-built itinerary
+        withVT(function () { safe(renderStay); safe(renderToday); }); // votes reshape the auto-built itinerary
       });
     }
     // Re-renders (e.g. a synced vote) build fresh hidden .reveal cards the boot
@@ -340,10 +340,12 @@
         });
       });
       save(VKEY, v);
-      safe(renderActivities); // delegated listeners bound once -> safe to re-render
-      safe(renderEat);        // restaurant vote buttons + tallies
-      safe(renderStay);       // itinerary reshaped by activity + dinner votes
-      safe(renderToday);
+      withVT(function () {
+        safe(renderActivities); // delegated listeners bound once -> safe to re-render
+        safe(renderEat);        // restaurant vote buttons + tallies
+        safe(renderStay);       // itinerary reshaped by activity + dinner votes
+        safe(renderToday);
+      });
     });
   }
 
@@ -397,7 +399,7 @@
         var t = document.querySelector('[data-tally="' + act + '"]');
         if (t) t.textContent = v[act].length + " vote" + (v[act].length === 1 ? "" : "s");
         pushPersonVotes(person, v); // dinner votes share the same Firestore votes collection
-        safe(renderStay); safe(renderToday); // votes reshape the dinner plan
+        withVT(function () { safe(renderStay); safe(renderToday); }); // votes reshape the dinner plan
       });
     }
     if (renderedOnce.eat) revealWithin($("eat")); else renderedOnce.eat = true;
@@ -982,11 +984,22 @@
     }
   }
 
+  /* --- motion (#32): wrap a DOM-mutating callback in a View Transition when the
+     browser supports it AND the user hasn't asked for reduced motion. Otherwise
+     run it straight. Pure browser API — no library, no network, offline-safe. */
+  function withVT(fn) {
+    if (document.startViewTransition &&
+        !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) {
+      try { document.startViewTransition(fn); return; } catch (e) { /* fall through */ }
+    }
+    fn();
+  }
+
   /* --- accordions: open the target section's <details> from nav / hash --- */
   function openDetailsIn(target) {
     if (!target) return;
     var det = target.tagName === "DETAILS" ? target : target.querySelector("details.acc");
-    if (det && !det.open) { det.open = true; revealWithin(det); }
+    if (det && !det.open) { withVT(function () { det.open = true; revealWithin(det); }); }
   }
   function revealWithin(scope) {
     scope.querySelectorAll(".reveal").forEach(function (el) { el.classList.add("in"); });
