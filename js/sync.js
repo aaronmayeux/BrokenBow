@@ -1,12 +1,20 @@
 /* ============================================================================
-   js/sync.js — Broken Bow shared-state layer (Cluster C)
+   js/sync.js — Broken Bow shared-state layer (Cluster C + D1)
 
    WHAT THIS DOES
-   - Mirrors activity votes to a shared Firebase/Firestore project so every
-     phone sees the same tally. One document per voter:
-         votes/{personId} = { name, picks: [activityId, ...], updatedAt }
-     Each person owns their own doc, so two people voting at once never clobber
-     each other (last-write-wins only within a single person's picks).
+   - Mirrors two things to a shared Firebase/Firestore project so every phone
+     sees the same data:
+
+       1) ACTIVITY + RESTAURANT VOTES (Cluster C) — one document per voter:
+            votes/{personId} = { name, picks: [activityId, ...], updatedAt }
+
+       2) SCAVENGER SCOREBOARD (Cluster D1) — one document per player:
+            scoreboard/{personId} = { name, found: [itemId, ...],
+                                      plates: [stateCode, ...], updatedAt }
+
+     Each person owns their own doc in each collection, so two people acting at
+     once never clobber each other (last-write-wins only within one person's
+     own data — never across people).
 
    DESIGN RULE — the app must survive with no signal (the cabin/trails have none)
    - app.js owns localStorage and updates instantly on every tap.
@@ -42,6 +50,9 @@ window.BBSync = (function () {
   var voteCb = null;      // app's vote-change callback
   var votesStarted = false;
 
+  var scoreCb = null;     // app's scoreboard-change callback
+  var scoresStarted = false;
+
   function warn(m, e) { if (window.console) console.warn("[BBSync] " + m, e || ""); }
 
   /* Lazily load + initialize Firebase. Resolves true on success, false on any
@@ -56,7 +67,8 @@ window.BBSync = (function () {
       var app = appMod.initializeApp(firebaseConfig);
       db = fs.getFirestore(app);
       ready = true;
-      startVotes(); // attach listener if app already asked for one
+      startVotes();  // attach listeners if the app already asked for them
+      startScores();
       return true;
     }).catch(function (e) {
       warn("Firebase unavailable — running local-only.", e);
@@ -66,57 +78,89 @@ window.BBSync = (function () {
 
   function ensure() { if (!bootPromise) bootPromise = boot(); return bootPromise; }
 
-  /* Live listener on the votes collection. Pushes the full set of voter docs to
-     the app whenever anything changes (including this device's own writes, via
-     Firestore's instant local echo). Attaches at most once. */
+  /* ----- generic live listener on a collection of per-person docs ----------
+     Pushes the full set of docs to `cb` whenever anything changes (including
+     this device's own writes, via Firestore's instant local echo). `fields`
+     lists the array fields to surface (e.g. ["picks"] or ["found","plates"]). */
+  function listen(colName, cb, fields) {
+    var col = fs.collection(db, colName);
+    return fs.onSnapshot(col, function (snap) {
+      var docs = [];
+      snap.forEach(function (d) {
+        var data = d.data() || {};
+        var row = { personId: d.id, name: data.name || d.id };
+        fields.forEach(function (f) { row[f] = Array.isArray(data[f]) ? data[f] : []; });
+        docs.push(row);
+      });
+      try { cb(docs); } catch (e) { warn(colName + " callback threw", e); }
+    }, function (err) { warn(colName + " listener error", err); });
+  }
+
+  /* Live listener on the votes collection. Attaches at most once. */
   function startVotes() {
     if (!ready || !voteCb || votesStarted) return;
     votesStarted = true;
-    try {
-      var col = fs.collection(db, "votes");
-      fs.onSnapshot(col, function (snap) {
-        var docs = [];
-        snap.forEach(function (d) {
-          var data = d.data() || {};
-          docs.push({
-            personId: d.id,
-            name: data.name || d.id,
-            picks: Array.isArray(data.picks) ? data.picks : []
-          });
-        });
-        try { voteCb(docs); } catch (e) { warn("vote callback threw", e); }
-      }, function (err) { warn("votes listener error", err); });
-    } catch (e) {
-      votesStarted = false; // allow a later retry
-      warn("startVotes failed", e);
-    }
+    try { listen("votes", voteCb, ["picks"]); }
+    catch (e) { votesStarted = false; warn("startVotes failed", e); }
+  }
+
+  /* Live listener on the scoreboard collection. Attaches at most once. */
+  function startScores() {
+    if (!ready || !scoreCb || scoresStarted) return;
+    scoresStarted = true;
+    try { listen("scoreboard", scoreCb, ["found", "plates"]); }
+    catch (e) { scoresStarted = false; warn("startScores failed", e); }
+  }
+
+  /* ----- generic per-person write. Safe no-op offline / before boot. -------
+     We only ever write the doc for the person who was just touched, so we
+     never overwrite anyone else with stale data. */
+  function write(colName, personId, payload) {
+    ensure().then(function () {
+      if (!ready) return; // offline: localStorage already has it; syncs on a later online action
+      try {
+        var ref = fs.doc(db, colName, personId);
+        payload.updatedAt = fs.serverTimestamp();
+        fs.setDoc(ref, payload);
+      } catch (e) { warn(colName + " write failed", e); }
+    });
   }
 
   return {
     /* Optional explicit boot. Safe to call anytime; memoized. */
     init: function () { ensure(); },
 
+    /* ----- VOTES (Cluster C) ----- */
+
     /* Subscribe to shared votes.
-       cb receives an array: [{ personId, name, picks: [activityId, ...] }] */
+       cb receives: [{ personId, name, picks: [activityId, ...] }] */
     onVotes: function (cb) {
       voteCb = cb;
       ensure().then(startVotes);
     },
 
-    /* Mirror ONE person's full pick list. Safe no-op offline / before boot.
-       We only ever write the doc for the person who was just toggled, so we
-       never overwrite anyone else with stale data. */
+    /* Mirror ONE person's full pick list. */
     pushVotes: function (personId, name, picks) {
-      ensure().then(function () {
-        if (!ready) return; // offline: localStorage already has it; will sync on a later online toggle
-        try {
-          var ref = fs.doc(db, "votes", personId);
-          fs.setDoc(ref, {
-            name: name,
-            picks: picks || [],
-            updatedAt: fs.serverTimestamp()
-          });
-        } catch (e) { warn("pushVotes failed", e); }
+      write("votes", personId, { name: name, picks: picks || [] });
+    },
+
+    /* ----- SCOREBOARD (Cluster D1) ----- */
+
+    /* Subscribe to the shared scavenger scoreboard.
+       cb receives: [{ personId, name, found: [itemId, ...], plates: [code, ...] }] */
+    onScores: function (cb) {
+      scoreCb = cb;
+      ensure().then(startScores);
+    },
+
+    /* Mirror ONE player's finds + spotted plates.
+       payload = { found: [itemId, ...], plates: [stateCode, ...] } */
+    pushScores: function (personId, name, payload) {
+      payload = payload || {};
+      write("scoreboard", personId, {
+        name: name,
+        found: payload.found || [],
+        plates: payload.plates || []
       });
     }
   };

@@ -133,12 +133,14 @@
   /* ----- localStorage (votes + checklists) ----- */
   function load(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch (e) { return {}; } }
   function save(key, o) { try { localStorage.setItem(key, JSON.stringify(o)); } catch (e) {} }
-  var VKEY = "bb_votes_v1", PKEY = "bb_packing_v1", SKEY = "bb_scavenger_v1", TKEY = "bb_theme", KKEY = "bb_kitchen_v1";
+  var VKEY = "bb_votes_v1", PKEY = "bb_packing_v1", SKEY = "bb_scavenger_v2", TKEY = "bb_theme", KKEY = "bb_kitchen_v1";
 
   /* voters = family minus the 1-yr-old → Aaron, Lucia, Zelphia, Melania */
   var VOTERS = TRIP.family.filter(function (f) { return !f.age || f.age >= 4; });
   var activitiesBound = false; // bind the voting click handler only once
   var eatBound = false;        // bind the restaurant voting/filter handlers only once
+  var scavengerBound = false;  // bind the scavenger click handler only once
+  var PLATE_BONUS = 3;         // bonus points for holding the farthest-away license plate
   var renderedOnce = {};       // per-section guard: first render animates, re-renders reveal instantly
   /* every activity id a given person is currently "in" for, from the votes map */
   function picksFor(name, v) { var out = []; for (var id in v) { if (v[id] && v[id].indexOf(name) >= 0) out.push(id); } return out; }
@@ -458,23 +460,194 @@
     });
   }
 
-  function renderScavenger() {
-    var state = load(SKEY), done = 0;
-    var html = SCAVENGER_HUNT.map(function (item, i) {
-      var on = !!state[i]; if (on) done++;
-      return '<label class="check ' + (on ? "done" : "") + '"><input type="checkbox" data-sc="' + i +
-        '" ' + (on ? "checked" : "") + "><span>" + esc(item) + "</span></label>";
+  /* --- scavenger hunt v2 (shared, scored, kid + adult) ---------------------
+     Per-player model: everyone has their own card. Tap your initial when you
+     spot something — finding it scores YOU, no claiming/stealing, so four
+     phones logging finds offline reconcile cleanly. State (per player) lives
+     in localStorage and mirrors to the Firestore `scoreboard` collection:
+
+       store = { found:  { itemId: [name, ...] },      // who found each item
+                 plates: { name:   [stateCode, ...] } } // plates each player saw
+
+     NOTE: scavenger cards are intentionally NOT `.reveal` elements, so the
+     sync-echo re-render can't hit the reveal-on-re-render bug (only the
+     wrapping acc-body is `.reveal`, and we never replace that). */
+
+  var STATE_BY_CODE = {}; US_STATES.forEach(function (s) { STATE_BY_CODE[s.code] = s; });
+
+  function scStore() { var s = load(SKEY); s.found = s.found || {}; s.plates = s.plates || {}; return s; }
+
+  // Great-circle miles between two lat/lng points.
+  function milesBetween(aLat, aLng, bLat, bLng) {
+    var R = 3959, r = Math.PI / 180;
+    var dLat = (bLat - aLat) * r, dLng = (bLng - aLng) * r;
+    var x = Math.sin(dLat / 2), y = Math.sin(dLng / 2);
+    var h = x * x + Math.cos(aLat * r) * Math.cos(bLat * r) * y * y;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+  function plateMiles(code) {
+    var s = STATE_BY_CODE[code]; if (!s) return 0;
+    return milesBetween(SCAVENGER_HOME.lat, SCAVENGER_HOME.lng, s.lat, s.lng);
+  }
+  // The single farthest-from-home plate in a list -> { code, mi } or null.
+  function farthestPlate(codes) {
+    var best = null, bm = -1;
+    (codes || []).forEach(function (c) { var m = plateMiles(c); if (m > bm) { bm = m; best = c; } });
+    return best ? { code: best, mi: Math.round(bm) } : null;
+  }
+  // Which player currently holds the farthest plate overall -> {name,code,mi} or null.
+  function plateLeader(store) {
+    var best = null, bm = -1;
+    VOTERS.forEach(function (f) {
+      var fp = farthestPlate(store.plates[f.name]);
+      if (fp && fp.mi > bm) { bm = fp.mi; best = { name: f.name, code: fp.code, mi: fp.mi }; }
+    });
+    return best;
+  }
+  // A player's score: points for items they found (+ plate bonus if they lead).
+  function playerPoints(name, store, leader) {
+    var pts = 0;
+    SCAVENGER_HUNT.forEach(function (it) {
+      if (it.special) return;
+      if ((store.found[it.id] || []).indexOf(name) >= 0) pts += it.points;
+    });
+    if (leader && leader.name === name) pts += PLATE_BONUS;
+    return pts;
+  }
+
+  // Mirror ONE player's finds + plates out to Firestore.
+  function foundItemsFor(name, store) {
+    var out = []; for (var id in store.found) { if (store.found[id].indexOf(name) >= 0) out.push(id); } return out;
+  }
+  function pushPersonScores(person, store) {
+    if (window.BBSync) BBSync.pushScores(person.toLowerCase(), person,
+      { found: foundItemsFor(person, store), plates: (store.plates[person] || []) });
+  }
+
+  function scoreboardChips(store) {
+    var leader = plateLeader(store);
+    var rows = VOTERS.map(function (f) { return { name: f.name, pts: playerPoints(f.name, store, leader) }; });
+    var top = 0; rows.forEach(function (r) { if (r.pts > top) top = r.pts; });
+    rows.sort(function (a, b) { return b.pts - a.pts; });
+    return rows.map(function (r) {
+      var lead = top > 0 && r.pts === top ? " lead" : "";
+      return '<div class="sc-player' + lead + '" data-player="' + esc(r.name) + '">' +
+        (lead ? '<span class="sc-crown">\u265B</span>' : "") +
+        '<span class="sc-name">' + esc(r.name) + "</span>" +
+        '<span class="sc-pts">' + r.pts + "</span></div>";
     }).join("");
-    $("scavenger").innerHTML = '<p class="progress" id="sc-prog">' + done + " / " + SCAVENGER_HUNT.length + " found</p>" + html;
-    $("scavenger").addEventListener("change", function (e) {
-      var c = e.target; if (c.dataset.sc === undefined) return;
-      var s = load(SKEY);
-      if (c.checked) s[c.dataset.sc] = 1; else delete s[c.dataset.sc];
-      save(SKEY, s);
-      c.closest(".check").classList.toggle("done", c.checked);
-      var dn = 0; document.querySelectorAll('[data-sc]').forEach(function (x) { if (x.checked) dn++; });
-      $("sc-prog").textContent = dn + " / " + SCAVENGER_HUNT.length + " found";
-      if (dn === SCAVENGER_HUNT.length) confetti();
+  }
+  function scoreboardHtml(store) { return '<div class="sc-board">' + scoreboardChips(store) + "</div>"; }
+
+  // Re-render just the board (snappier than a full re-render) + pulse the chip.
+  function bumpScore(person) {
+    var board = $("scavenger").querySelector(".sc-board"); if (!board) return;
+    board.innerHTML = scoreboardChips(scStore());
+    board.querySelectorAll(".sc-player").forEach(function (chip) {
+      if (chip.dataset.player === person) { chip.classList.remove("pop"); void chip.offsetWidth; chip.classList.add("pop"); }
+    });
+  }
+
+  function finderButtons(it, store) {
+    var finders = store.found[it.id] || [];
+    return VOTERS.map(function (f) {
+      var on = finders.indexOf(f.name) >= 0;
+      return '<button class="voter sc-finder ' + (on ? "on" : "") + '" data-item="' + it.id +
+        '" data-person="' + esc(f.name) + '" title="' + esc(f.name) + '">' + esc(f.name.charAt(0)) + "</button>";
+    }).join("");
+  }
+  function itemHtml(it, store) {
+    var bonus = it.points > 1 ? '<span class="sc-bonus">+' + it.points + "</span>" : "";
+    return '<div class="sc-item"><div class="sc-emoji">' + it.emoji + "</div>" +
+      '<div class="sc-text"><span class="sc-label">' + esc(it.label) + "</span>" + bonus + "</div>" +
+      '<div class="voters sc-finders">' + finderButtons(it, store) + "</div></div>";
+  }
+  // The special "farthest license plate" card: pick a state, tap who saw it.
+  function plateHtml(it, store) {
+    var leader = plateLeader(store);
+    var opts = US_STATES.map(function (s) { return '<option value="' + s.code + '">' + esc(s.name) + "</option>"; }).join("");
+    var pickers = VOTERS.map(function (f) {
+      var lead = leader && leader.name === f.name ? " lead" : "";
+      return '<button class="voter sc-plate-add' + lead + '" data-person="' + esc(f.name) +
+        '" title="' + esc(f.name) + ' spotted the selected plate">' + esc(f.name.charAt(0)) + "</button>";
+    }).join("");
+    var summary = VOTERS.map(function (f) {
+      var fp = farthestPlate(store.plates[f.name]), n = (store.plates[f.name] || []).length;
+      var lead = leader && leader.name === f.name ? " \u265B" : "";
+      return "<li><strong>" + esc(f.name) + "</strong>: " +
+        (fp ? fp.code + " \u00b7 " + fp.mi.toLocaleString() + " mi" + lead : "\u2014") +
+        ' <span class="sc-plate-n">(' + n + " seen)</span></li>";
+    }).join("");
+    return '<div class="sc-item sc-plate"><div class="sc-emoji">' + it.emoji + "</div>" +
+      '<div class="sc-text"><span class="sc-label">' + esc(it.label) + "</span>" +
+      '<span class="sc-bonus">+' + PLATE_BONUS + " to the winner</span></div>" +
+      '<div class="sc-plate-pick"><label class="sc-plate-hint">Saw a plate? Pick the state, then tap who spotted it:</label>' +
+      '<div class="sc-plate-row"><select id="sc-plate-select" aria-label="State on the license plate">' + opts + "</select>" +
+      '<div class="voters">' + pickers + "</div></div>" +
+      '<ul class="sc-plate-summary">' + summary + "</ul></div></div>";
+  }
+
+  function renderScavenger() {
+    var store = scStore();
+    var kids = SCAVENGER_HUNT.filter(function (x) { return x.who === "kid"; });
+    var adults = SCAVENGER_HUNT.filter(function (x) { return x.who === "adult"; });
+    $("scavenger").innerHTML =
+      scoreboardHtml(store) +
+      '<p class="sc-howto">Everyone has their own card \u2014 tap your initial when you spot something. ' +
+      "Works with no signal; it syncs when you\u2019re back on. \uD83D\uDC8E is worth the most.</p>" +
+      '<h3 class="sc-group">\uD83E\uDDD2 For the kids</h3>' +
+      kids.map(function (it) { return itemHtml(it, store); }).join("") +
+      '<h3 class="sc-group">\uD83C\uDF7B For the grown-ups</h3>' +
+      adults.map(function (it) { return it.special === "plate" ? plateHtml(it, store) : itemHtml(it, store); }).join("");
+
+    if (!scavengerBound) {
+      scavengerBound = true;
+      $("scavenger").addEventListener("click", function (e) {
+        var find = e.target.closest(".sc-finder");
+        if (find) {
+          var id = find.dataset.item, person = find.dataset.person, s = scStore();
+          s.found[id] = s.found[id] || [];
+          var i = s.found[id].indexOf(person), added = i < 0;
+          if (added) s.found[id].push(person); else s.found[id].splice(i, 1);
+          save(SKEY, s);
+          find.classList.toggle("on");
+          bumpScore(person);
+          pushPersonScores(person, s);
+          if (added && id === "diamond") confetti(); // the white whale earns a celebration
+          return;
+        }
+        var add = e.target.closest(".sc-plate-add");
+        if (add) {
+          var sel = $("sc-plate-select"); if (!sel) return;
+          var code = sel.value, p = add.dataset.person, st = scStore();
+          st.plates[p] = st.plates[p] || [];
+          var j = st.plates[p].indexOf(code);
+          if (j >= 0) st.plates[p].splice(j, 1); else st.plates[p].push(code);
+          save(SKEY, st);
+          pushPersonScores(p, st);
+          safe(renderScavenger); // leader/crown + summary can shift -> rebuild
+        }
+      });
+    }
+  }
+
+  /* pull the shared scoreboard from Firestore -> rebuild the local store ->
+     re-render. Safe no-op when Firebase is missing/offline. */
+  function initScoreSync() {
+    if (!window.BBSync) return;
+    var names = VOTERS.map(function (f) { return f.name; });
+    BBSync.onScores(function (docs) {
+      var store = { found: {}, plates: {} };
+      docs.forEach(function (d) {
+        if (names.indexOf(d.name) < 0) return; // ignore stale / non-player docs
+        (d.found || []).forEach(function (id) {
+          store.found[id] = store.found[id] || [];
+          if (store.found[id].indexOf(d.name) < 0) store.found[id].push(d.name);
+        });
+        if ((d.plates || []).length) store.plates[d.name] = d.plates.slice();
+      });
+      save(SKEY, store);
+      safe(renderScavenger); // delegated listener bound once -> safe to re-render
     });
   }
 
@@ -861,6 +1034,7 @@
     safe(renderHome);
     safe(renderPacking);
     safe(renderScavenger);
+    safe(initScoreSync);
     safe(renderSpinner);
     safe(initTheme);
     safe(initPrint);

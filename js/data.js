@@ -611,21 +611,123 @@ const FORT_ROSALIE = {
 };
 
 /* ============================================================================
-   KIDS' SCAVENGER HUNT — checked state lives in localStorage (by index).
+   SCAVENGER HUNT v2 (Cluster D1) — shared, scored, kid + adult items.
+
+   State lives PER-PLAYER in localStorage (bb_scavenger_v2) and mirrors to the
+   Firestore `scoreboard` collection (see js/sync.js). Everyone has their own
+   card: finding a deer scores YOU — no claiming/stealing, so it reconciles
+   cleanly even when four phones log finds offline at the cabin.
+
+   Keyed by stable `id` (NEVER by array index) so adding/reordering items can
+   never scramble saved finds.
+
+   Each item: { id, emoji, label, who: "kid" | "adult", points }
+     emoji  = shown big so Melania (5) can play solo without anyone reading.
+              (Lucia can swap these for custom field-guide icons later — the
+              renderer only needs this one field to change.)
+     who    = "kid" or "adult"; kid items render first.
+     points = 1 normal; 2/3/5 = rare bonus (the diamond is the white whale).
+
+   The `farthest-plate` item is SPECIAL (special: "plate"): instead of a tap,
+   each player picks states they've spotted from a scrollable list; the app
+   ranks by distance from home (SCAVENGER_HOME) and crowns a winner at trip's
+   end. Its bonus goes to the winner, not per-tap — so points: 0 here.
    ========================================================================== */
 const SCAVENGER_HUNT = [
-  "Spot a deer",
-  "Find a pinecone",
-  "Ride or see a paddle boat",
-  "Touch a tree taller than Dad",
-  "Feed an animal at the Safari Park",
-  "Spot a fish in the river",
-  "See a real campfire",
-  "Find a heart-shaped rock",
-  "Hear a bird singing",
-  "Roast a marshmallow",
-  "Dig with a diamond tool",
-  "See the Mississippi River"
+  /* --- KID items (emoji-first; Melania can play by sight alone) --- */
+  { id: "yellow-car",      emoji: "🚗", label: "A yellow car",                                who: "kid",   points: 1 },
+  { id: "welcome-sign",    emoji: "🪧", label: "A \"Welcome to ___\" state sign",             who: "kid",   points: 1 },
+  { id: "logging-truck",   emoji: "🚛", label: "A logging truck full of timber",              who: "kid",   points: 1 },
+  { id: "fireworks-stand", emoji: "🎆", label: "A roadside fireworks stand",                  who: "kid",   points: 1 },
+  { id: "cattle",          emoji: "🐄", label: "Cows or longhorns in a field",                who: "kid",   points: 1 },
+  { id: "lizard",          emoji: "🦎", label: "A lizard on the cabin",                       who: "kid",   points: 1 },
+  { id: "turtle",          emoji: "🐢", label: "A turtle on a log",                           who: "kid",   points: 1 },
+  { id: "firefly",         emoji: "✨", label: "A firefly after dark",                        who: "kid",   points: 1 },
+  { id: "deer",            emoji: "🦌", label: "A deer",                                      who: "kid",   points: 1 },
+  { id: "black-bear",      emoji: "🐻", label: "A black bear (Hochatown's mascot)",           who: "kid",   points: 1 },
+  { id: "bigfoot",         emoji: "🐾", label: "Bigfoot — sign, statue, or merch",            who: "kid",   points: 1 },
+  { id: "a-frame",         emoji: "🏠", label: "A giant A-frame cabin in the trees",          who: "kid",   points: 1 },
+  { id: "skip-rock",       emoji: "🪨", label: "Skip a rock across the water",                who: "kid",   points: 1 },
+  { id: "safari-trio",     emoji: "🦓", label: "A zebra, an ostrich, AND a buffalo (Safari Park)", who: "kid", points: 3 },
+  { id: "mini-golf-ace",   emoji: "⛳", label: "A hole-in-one at mini golf",                  who: "kid",   points: 3 },
+  { id: "quartz",          emoji: "🔮", label: "A piece of quartz crystal in the dig field",  who: "kid",   points: 2 },
+  { id: "diamond",         emoji: "💎", label: "A real diamond or gemstone at Crater of Diamonds", who: "kid", points: 5 },
+  { id: "hot-spring-steam",emoji: "♨️", label: "Steam rising off a hot spring",               who: "kid",   points: 1 },
+  { id: "waterfowl",       emoji: "🦆", label: "A duck or pelican on the water",              who: "kid",   points: 1 },
+
+  /* --- ADULT items (naughty & funny finds) --- */
+  { id: "farthest-plate",  emoji: "🔢", label: "Farthest-away license plate — pick the state", who: "adult", points: 0, special: "plate" },
+  { id: "are-we-there",    emoji: "🗣️", label: "Catch someone saying \"are we there yet\"",    who: "adult", points: 1 },
+  { id: "sticker-truck",   emoji: "🚚", label: "A truck buried in bumper stickers",           who: "adult", points: 1 },
+  { id: "day-drinker",     emoji: "🍺", label: "Someone day-drinking harder than you before noon", who: "adult", points: 1 },
+  { id: "church-sign",     emoji: "⛪", label: "A church sign with an accidental double meaning", who: "adult", points: 2 },
+  { id: "cabin-name",      emoji: "🏚️", label: "The most unhinged cabin name on the strip",   who: "adult", points: 1 },
+  { id: "cursed-koozie",   emoji: "👕", label: "A koozie or shirt with a cursed slogan",       who: "adult", points: 1 },
+  { id: "zero-bars",       emoji: "📵", label: "Your phone at zero bars — find the void",      who: "adult", points: 1 },
+  { id: "bathhouse-sign",  emoji: "🛁", label: "A 1900s bathhouse sign on Bathhouse Row",      who: "adult", points: 2 },
+  { id: "steel-magnolias", emoji: "🎬", label: "A \"Steel Magnolias\" filming spot in Natchitoches", who: "adult", points: 3 },
+  { id: "mississippi-barge",emoji:"🚢", label: "A barge on the Mississippi at Natchez",        who: "adult", points: 1 },
+  { id: "repropose-sunset",emoji: "🌅", label: "A sunset worth re-proposing over",            who: "adult", points: 1 },
+  { id: "fort-rosalie",    emoji: "⚜️", label: "The Fort Rosalie marker — your Mayeux ancestor's site", who: "adult", points: 2 }
+];
+
+/* Home origin for the license-plate distance ranking (Prairieville, LA). */
+const SCAVENGER_HOME = { name: "Prairieville, LA", lat: 30.3013, lng: -90.9223 };
+
+/* US states + DC with rough center coords — drives the plate picker and the
+   "farthest plate from home" ranking. `code` = the plate abbreviation. */
+const US_STATES = [
+  { code: "AL", name: "Alabama",        lat: 32.806671,  lng: -86.791130 },
+  { code: "AK", name: "Alaska",         lat: 61.370716,  lng: -152.404419 },
+  { code: "AZ", name: "Arizona",        lat: 33.729759,  lng: -111.431221 },
+  { code: "AR", name: "Arkansas",       lat: 34.969704,  lng: -92.373123 },
+  { code: "CA", name: "California",     lat: 36.116203,  lng: -119.681564 },
+  { code: "CO", name: "Colorado",       lat: 39.059811,  lng: -105.311104 },
+  { code: "CT", name: "Connecticut",    lat: 41.597782,  lng: -72.755371 },
+  { code: "DE", name: "Delaware",       lat: 39.318523,  lng: -75.507141 },
+  { code: "DC", name: "Washington DC",  lat: 38.897438,  lng: -77.026817 },
+  { code: "FL", name: "Florida",        lat: 27.766279,  lng: -81.686783 },
+  { code: "GA", name: "Georgia",        lat: 33.040619,  lng: -83.643074 },
+  { code: "HI", name: "Hawaii",         lat: 21.094318,  lng: -157.498337 },
+  { code: "ID", name: "Idaho",          lat: 44.240459,  lng: -114.478828 },
+  { code: "IL", name: "Illinois",       lat: 40.349457,  lng: -88.986137 },
+  { code: "IN", name: "Indiana",        lat: 39.849426,  lng: -86.258278 },
+  { code: "IA", name: "Iowa",           lat: 42.011539,  lng: -93.210526 },
+  { code: "KS", name: "Kansas",         lat: 38.526600,  lng: -96.726486 },
+  { code: "KY", name: "Kentucky",       lat: 37.668140,  lng: -84.670067 },
+  { code: "LA", name: "Louisiana",      lat: 31.169546,  lng: -91.867805 },
+  { code: "ME", name: "Maine",          lat: 44.693947,  lng: -69.381927 },
+  { code: "MD", name: "Maryland",       lat: 39.063946,  lng: -76.802101 },
+  { code: "MA", name: "Massachusetts",  lat: 42.230171,  lng: -71.530106 },
+  { code: "MI", name: "Michigan",       lat: 43.326618,  lng: -84.536095 },
+  { code: "MN", name: "Minnesota",      lat: 45.694454,  lng: -93.900192 },
+  { code: "MS", name: "Mississippi",    lat: 32.741646,  lng: -89.678696 },
+  { code: "MO", name: "Missouri",       lat: 38.456085,  lng: -92.288368 },
+  { code: "MT", name: "Montana",        lat: 46.921925,  lng: -110.454353 },
+  { code: "NE", name: "Nebraska",       lat: 41.125370,  lng: -98.268082 },
+  { code: "NV", name: "Nevada",         lat: 38.313515,  lng: -117.055374 },
+  { code: "NH", name: "New Hampshire",  lat: 43.452492,  lng: -71.563896 },
+  { code: "NJ", name: "New Jersey",     lat: 40.298904,  lng: -74.521011 },
+  { code: "NM", name: "New Mexico",     lat: 34.840515,  lng: -106.248482 },
+  { code: "NY", name: "New York",       lat: 42.165726,  lng: -74.948051 },
+  { code: "NC", name: "North Carolina", lat: 35.630066,  lng: -79.806419 },
+  { code: "ND", name: "North Dakota",   lat: 47.528912,  lng: -99.784012 },
+  { code: "OH", name: "Ohio",           lat: 40.388783,  lng: -82.764915 },
+  { code: "OK", name: "Oklahoma",       lat: 35.565342,  lng: -96.928917 },
+  { code: "OR", name: "Oregon",         lat: 44.572021,  lng: -122.070938 },
+  { code: "PA", name: "Pennsylvania",   lat: 40.590752,  lng: -77.209755 },
+  { code: "RI", name: "Rhode Island",   lat: 41.680893,  lng: -71.511780 },
+  { code: "SC", name: "South Carolina", lat: 33.856892,  lng: -80.945007 },
+  { code: "SD", name: "South Dakota",   lat: 44.299782,  lng: -99.438828 },
+  { code: "TN", name: "Tennessee",      lat: 35.747845,  lng: -86.692345 },
+  { code: "TX", name: "Texas",          lat: 31.054487,  lng: -97.563461 },
+  { code: "UT", name: "Utah",           lat: 40.150032,  lng: -111.862434 },
+  { code: "VT", name: "Vermont",        lat: 44.045876,  lng: -72.710686 },
+  { code: "VA", name: "Virginia",       lat: 37.769337,  lng: -78.169968 },
+  { code: "WA", name: "Washington",     lat: 47.400902,  lng: -121.490494 },
+  { code: "WV", name: "West Virginia",  lat: 38.491226,  lng: -80.954453 },
+  { code: "WI", name: "Wisconsin",      lat: 44.268543,  lng: -89.616508 },
+  { code: "WY", name: "Wyoming",        lat: 42.755966,  lng: -107.302490 }
 ];
 
 /* ============================================================================
