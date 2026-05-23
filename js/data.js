@@ -856,3 +856,18 @@ const CABIN_KITCHEN = {
     }
   ]
 };
+
+/* ============================================================================
+   RESOURCES — maps, guides & PDFs to link out to. Add new finds here.
+   Shape: { title, note, url, kind }  — `kind` is a short pill label.
+   These open external pages, so the app reminds you to save/screenshot them
+   before you lose signal at the cabin or on the trails.
+   ========================================================================== */
+const RESOURCES = [
+  {
+    title: "Beavers Bend State Park — Park Map",
+    note: "Trails, cabins, the swim beach, Nature Center & Forest Heritage Center, all on one sheet.",
+    url: "https://d1pk12b7bb81je.cloudfront.net/okdataengine/appmedia/documents/6/6466/2023%20Beavers%20Bend%20State%20Park%20Map.pdf",
+    kind: "Map · PDF"
+  }
+];

@@ -584,7 +584,10 @@
       '<div class="sc-plate-pick"><label class="sc-plate-hint">Saw a plate? Pick the state, then tap who spotted it:</label>' +
       '<div class="sc-plate-row"><select id="sc-plate-select" aria-label="State on the license plate">' + opts + "</select>" +
       '<div class="voters">' + pickers + "</div></div>" +
-      '<ul class="sc-plate-summary">' + summary + "</ul></div></div>";
+      '<ul class="sc-plate-summary">' + summary + "</ul>" +
+      '<div class="clear-bar sc-plate-reset"><button type="button" class="clear-btn" ' +
+      'data-clear="scav-plates" data-label="Reset all plates">Reset all plates</button></div>' +
+      "</div></div>";
   }
 
   function renderScavenger() {
@@ -1016,6 +1019,103 @@
     document.querySelectorAll(".reveal").forEach(function (el) { io.observe(el); });
   }
 
+  /* --- maps & resources: simple link-out cards (content lives in RESOURCES) - */
+  function renderResources() {
+    var box = $("resources"); if (!box || typeof RESOURCES === "undefined") return;
+    box.innerHTML =
+      '<p class="lead">External maps &amp; guides \u2014 they need signal to load, so open and ' +
+      "screenshot (or save the PDF) before you head out to the cabin or trails.</p>" +
+      '<div class="res-list">' +
+      RESOURCES.map(function (r) {
+        return '<a class="res-card" href="' + esc(r.url) + '" target="_blank" rel="noopener">' +
+          '<span class="res-ico">\uD83D\uDDFA\uFE0F</span>' +
+          '<span class="res-text"><span class="res-title">' + esc(r.title) + "</span>" +
+          (r.note ? '<span class="res-note">' + esc(r.note) + "</span>" : "") + "</span>" +
+          (r.kind ? '<span class="res-kind">' + esc(r.kind) + "</span>" : "") + "</a>";
+      }).join("") + "</div>";
+  }
+
+  /* --- per-section "Clear" controls (tap twice to confirm) ------------------
+     Each button wipes ONLY its own section. Shared data (votes, scavenger) is
+     also pushed empty to Firestore for all four players so the reset sticks on
+     every phone \u2014 do these while you have signal. Packing + kitchen are local
+     only, so they clear cleanly offline. Re-renders go through the guarded
+     renderers (activities/eat/scavenger) or touch the DOM in place (packing/
+     kitchen, whose renderers re-bind listeners and so are NOT re-called). */
+  var clearTimers = {};
+
+  function mountClearBar(containerId, scope, label) {
+    var c = $(containerId); if (!c) return;
+    var prev = c.previousElementSibling;
+    if (prev && prev.classList && prev.classList.contains("clear-bar")) return; // once
+    var bar = document.createElement("div");
+    bar.className = "clear-bar";
+    bar.innerHTML = '<button type="button" class="clear-btn" data-clear="' + scope +
+      '" data-label="' + esc(label) + '">' + esc(label) + "</button>";
+    c.parentNode.insertBefore(bar, c);
+  }
+
+  function resetClearBtn(btn) { btn.classList.remove("armed"); btn.textContent = btn.dataset.label; }
+
+  function doClear(scope) {
+    if (scope === "votes-act") {
+      var va = load(VKEY); ACTIVITIES.forEach(function (a) { delete va[a.id]; }); save(VKEY, va);
+      VOTERS.forEach(function (f) { pushPersonVotes(f.name, va); });
+      safe(renderActivities); safe(renderStay); safe(renderToday); safe(buildPrintSheet);
+    } else if (scope === "votes-eat") {
+      var ve = load(VKEY); RESTAURANTS.forEach(function (r) { delete ve[r.id]; }); save(VKEY, ve);
+      VOTERS.forEach(function (f) { pushPersonVotes(f.name, ve); });
+      safe(renderEat); safe(renderStay); safe(renderToday); safe(buildPrintSheet);
+    } else if (scope === "kitchen") {
+      save(KKEY, {});
+      document.querySelectorAll("#kitchen [data-meal]").forEach(function (c) {
+        c.checked = true; var card = c.closest(".meal"); if (card) card.classList.remove("skipped");
+      });
+      document.querySelectorAll("#kitchen [data-buy]").forEach(function (c) { c.checked = false; });
+      safe(drawGrocery); safe(renderStay); safe(renderToday); safe(buildPrintSheet);
+    } else if (scope === "packing") {
+      save(PKEY, {});
+      var pks = document.querySelectorAll("#packing [data-pk]");
+      pks.forEach(function (c) { c.checked = false; var l = c.closest(".check"); if (l) l.classList.remove("done"); });
+      var p = $("pk-prog"); if (p) p.textContent = "0 / " + pks.length + " packed";
+    } else if (scope === "scav-all") {
+      save(SKEY, { found: {}, plates: {} });
+      VOTERS.forEach(function (f) { pushPersonScores(f.name, scStore()); });
+      safe(renderScavenger);
+    } else if (scope === "scav-plates") {
+      var s = scStore(); s.plates = {}; save(SKEY, s);
+      VOTERS.forEach(function (f) { pushPersonScores(f.name, s); });
+      safe(renderScavenger);
+    }
+  }
+
+  function initClearControls() {
+    mountClearBar("activities", "votes-act", "Clear activity votes");
+    mountClearBar("eat", "votes-eat", "Clear restaurant votes");
+    mountClearBar("kitchen", "kitchen", "Reset kitchen choices");
+    mountClearBar("packing", "packing", "Uncheck all packing");
+    mountClearBar("scavenger", "scav-all", "Clear hunt (finds + plates)");
+
+    document.addEventListener("click", function (e) {
+      var btn = e.target.closest(".clear-btn"); if (!btn) return;
+      var scope = btn.dataset.clear;
+      if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+      if (clearTimers[scope]) {                 // second tap within the window -> confirm
+        clearTimeout(clearTimers[scope]); clearTimers[scope] = null;
+        doClear(scope);
+        if (document.body.contains(btn)) {       // scavenger re-render may have replaced it
+          btn.classList.remove("armed"); btn.textContent = "Cleared \u2713";
+          setTimeout(function () { if (document.body.contains(btn)) resetClearBtn(btn); }, 1400);
+        }
+      } else {                                  // first tap -> arm + auto-disarm after 3s
+        btn.classList.add("armed"); btn.textContent = "Tap again to confirm";
+        clearTimers[scope] = setTimeout(function () {
+          clearTimers[scope] = null; if (document.body.contains(btn)) resetClearBtn(btn);
+        }, 3000);
+      }
+    });
+  }
+
   /* =========================================================================
      INIT — each step isolated so one error can't take down the page.
      ======================================================================= */
@@ -1035,6 +1135,8 @@
     safe(renderPacking);
     safe(renderScavenger);
     safe(initScoreSync);
+    safe(renderResources);
+    safe(initClearControls);
     safe(renderSpinner);
     safe(initTheme);
     safe(initPrint);
