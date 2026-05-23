@@ -174,7 +174,14 @@
     var h = Math.floor(s / 3600);  s -= h * 3600;
     var m = Math.floor(s / 60);    s -= m * 60;
     var cells = [["cd-d", d], ["cd-h", h], ["cd-m", m], ["cd-s", s]];
-    cells.forEach(function (c) { var el = $(c[0]); if (el) el.textContent = c[1]; });
+    cells.forEach(function (c) {
+      var el = $(c[0]); if (!el) return;
+      var next = String(c[1]);
+      if (el.textContent !== next) {        // only flip the digits that actually changed
+        el.textContent = next;
+        el.classList.remove("flip"); void el.offsetWidth; el.classList.add("flip");
+      }
+    });
     cap.textContent = caption;
   }
 
@@ -243,7 +250,8 @@
   }
 
   /* --- drive up (Leg 1) --- */
-  function renderDriveUp() {
+  /* --- the route (Leg 1 drive up + Leg 3 scenic home) — ONE combined timeline --- */
+  function driveUpHtml() {
     var u = DRIVE_UP;
     var chips = u.path.map(function (p) { return "<span>" + esc(p) + "</span>"; }).join("");
     var stops = u.stops.map(function (s) {
@@ -251,7 +259,7 @@
       return '<div class="tl-item"><div class="tl-when">' + esc(s.when) + " · " + esc(s.name) + dir +
         '</div><div class="tl-note">' + esc(s.note) + "</div></div>";
     }).join("");
-    $("drive").innerHTML =
+    return '<h3 class="route-leg">Heading up · Sunday, June 7</h3>' +
       '<p class="lead">' + esc(u.distanceMi) + " · " + esc(u.driveTime) + ". Suggested departure <strong>" + esc(u.departSuggested) +
       "</strong> to clear the " + esc(u.checkIn) + " check-in with buffer.</p>" +
       '<div class="route-chips">' + chips + "</div>" +
@@ -259,6 +267,31 @@
       '<div class="tl-item"><div class="tl-when">' + esc(u.arrive) + " · Arrive Hochatown</div>" +
       '<div class="tl-note">Check in at ' + esc(u.checkIn) + ". " +
       '<a class="dir" href="' + mapsDirUrl(TRIP.lodging) + '" target="_blank" rel="noopener">cabin directions ↗</a></div></div></div>';
+  }
+  function scenicHomeHtml() {
+    var days = SCENIC_HOME.map(function (d) {
+      var stops = d.stops.map(function (id) {
+        var s = LEG3_BY_ID[id]; if (!s) return "";
+        return '<p class="blurb"><strong>' + esc(s.name) + "</strong> <span class=\"muted\">· " + esc(s.region) +
+          "</span>" + (s.rating != null ? " " + ratingHtml(s) : "") + "<br><span class=\"notes\">" + esc(s.blurb) + " " + esc(s.notes) + "</span>" +
+          (s.priceDetail ? '<br><span class="price-detail">' + esc(s.priceDetail) + "</span>" : "") +
+          '<br>' + mapsAnchor(s) + "</p>";
+      }).join("");
+      return '<div class="card reveal day"><div class="day-date"><div class="dow">' + d.dow + '</div><div class="dnum">' +
+        parseInt(d.date.slice(8, 10), 10) + '</div></div><div class="day-body"><h3>' + esc(d.title) + "</h3>" + stops +
+        (d.overnight ? '<p class="overnight">Overnight: ' + esc(d.overnight) + "</p>" : '<p class="overnight">Home sweet home</p>') +
+        "</div></div>";
+    }).join("");
+    var f = FORT_ROSALIE;
+    var sidebar = '<div class="sidebar reveal"><h3>' + esc(f.title) + '</h3><p class="blurb">' + esc(f.body) +
+      '</p><p class="notes">' + esc(f.hours) + ' · ' + mapsAnchor(f) + "</p><p class=\"footnote\">" + esc(f.footnote) + "</p></div>";
+    return '<h3 class="route-leg">The scenic way home · June 11–13</h3>' +
+      '<p class="lead">Two nights, three states, and one stop that\u2019s just for us.</p>' +
+      '<div class="grid">' + days + "</div>" + sidebar;
+  }
+  function renderRoute() {
+    var box = $("route"); if (!box) return;
+    box.innerHTML = driveUpHtml() + '<div class="route-divider"></div>' + scenicHomeHtml();
   }
 
   /* --- the stay (Leg 2) --- */
@@ -418,27 +451,6 @@
     }).join("");
   }
 
-  /* --- scenic route home (Leg 3) + Fort Rosalie sidebar --- */
-  function renderHome() {
-    var days = SCENIC_HOME.map(function (d) {
-      var stops = d.stops.map(function (id) {
-        var s = LEG3_BY_ID[id]; if (!s) return "";
-        return '<p class="blurb"><strong>' + esc(s.name) + "</strong> <span class=\"muted\">· " + esc(s.region) +
-          "</span>" + (s.rating != null ? " " + ratingHtml(s) : "") + "<br><span class=\"notes\">" + esc(s.blurb) + " " + esc(s.notes) + "</span>" +
-          (s.priceDetail ? '<br><span class="price-detail">' + esc(s.priceDetail) + "</span>" : "") +
-          '<br>' + mapsAnchor(s) + "</p>";
-      }).join("");
-      return '<div class="card reveal day"><div class="day-date"><div class="dow">' + d.dow + '</div><div class="dnum">' +
-        parseInt(d.date.slice(8, 10), 10) + '</div></div><div class="day-body"><h3>' + esc(d.title) + "</h3>" + stops +
-        (d.overnight ? '<p class="overnight">Overnight: ' + esc(d.overnight) + "</p>" : '<p class="overnight">Home sweet home</p>') +
-        "</div></div>";
-    }).join("");
-    var f = FORT_ROSALIE;
-    var sidebar = '<div class="sidebar reveal"><h3>' + esc(f.title) + '</h3><p class="blurb">' + esc(f.body) +
-      '</p><p class="notes">' + esc(f.hours) + ' · ' + mapsAnchor(f) + "</p><p class=\"footnote\">" + esc(f.footnote) + "</p></div>";
-    $("home").innerHTML = days + sidebar;
-  }
-
   /* --- checklists (packing + scavenger) --- */
   function renderPacking() {
     var state = load(PKEY), total = 0, done = 0;
@@ -534,7 +546,7 @@
     return rows.map(function (r) {
       var lead = top > 0 && r.pts === top ? " lead" : "";
       return '<div class="sc-player' + lead + '" data-player="' + esc(r.name) + '">' +
-        (lead ? '<span class="sc-crown">\u265B</span>' : "") +
+        '<span class="sc-crown' + (lead ? "" : " sc-crown--off") + '">\u265B</span>' +
         '<span class="sc-name">' + esc(r.name) + "</span>" +
         '<span class="sc-pts">' + r.pts + "</span></div>";
     }).join("");
@@ -669,7 +681,9 @@
           clearInterval(iv);
           var pick = pool[Math.floor(Math.random() * pool.length)];
           out.classList.remove("rolling");
-          out.textContent = "Tonight: " + pick.name;
+          out.innerHTML = "Tonight: " +
+            '<a class="dir spin-pick" href="' + mapsPlaceUrl(pick) + '" target="_blank" rel="noopener">' +
+            esc(pick.name) + " \u2197</a>";
         }
       }, 70);
     });
@@ -999,7 +1013,7 @@
   function openDetailsIn(target) {
     if (!target) return;
     var det = target.tagName === "DETAILS" ? target : target.querySelector("details.acc");
-    if (det && !det.open) { withVT(function () { det.open = true; revealWithin(det); }); }
+    if (det && !det.open) { det.open = true; revealWithin(det); }
   }
   function revealWithin(scope) {
     scope.querySelectorAll(".reveal").forEach(function (el) { el.classList.add("in"); });
@@ -1137,14 +1151,13 @@
   document.addEventListener("DOMContentLoaded", function () {
     safe(renderHero);
     safe(renderToday);
-    safe(renderDriveUp);
+    safe(renderRoute);
     safe(renderStay);
     safe(renderActivities);
     safe(initSync);
     safe(renderEat);
     safe(renderShop);
     safe(renderKitchen);
-    safe(renderHome);
     safe(renderPacking);
     safe(renderScavenger);
     safe(initScoreSync);
