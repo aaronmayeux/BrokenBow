@@ -672,62 +672,62 @@ const SCAVENGER_HUNT = [
 ];
 
 /* Home origin for the license-plate distance ranking (Prairieville, LA). */
-const SCAVENGER_HOME = { name: "Prairieville, LA", lat: 30.3013, lng: -90.9223 };
+const SCAVENGER_HOME = { name: "Broken Bow, OK", lat: 34.0287, lng: -94.7385 };
 
 /* US states + DC with rough center coords — drives the plate picker and the
    "farthest plate from home" ranking. `code` = the plate abbreviation. */
 const US_STATES = [
-  { code: "AL", name: "Alabama",        lat: 32.806671,  lng: -86.791130 },
-  { code: "AK", name: "Alaska",         lat: 61.370716,  lng: -152.404419 },
-  { code: "AZ", name: "Arizona",        lat: 33.729759,  lng: -111.431221 },
-  { code: "AR", name: "Arkansas",       lat: 34.969704,  lng: -92.373123 },
-  { code: "CA", name: "California",     lat: 36.116203,  lng: -119.681564 },
-  { code: "CO", name: "Colorado",       lat: 39.059811,  lng: -105.311104 },
-  { code: "CT", name: "Connecticut",    lat: 41.597782,  lng: -72.755371 },
-  { code: "DE", name: "Delaware",       lat: 39.318523,  lng: -75.507141 },
-  { code: "DC", name: "Washington DC",  lat: 38.897438,  lng: -77.026817 },
-  { code: "FL", name: "Florida",        lat: 27.766279,  lng: -81.686783 },
-  { code: "GA", name: "Georgia",        lat: 33.040619,  lng: -83.643074 },
-  { code: "HI", name: "Hawaii",         lat: 21.094318,  lng: -157.498337 },
-  { code: "ID", name: "Idaho",          lat: 44.240459,  lng: -114.478828 },
-  { code: "IL", name: "Illinois",       lat: 40.349457,  lng: -88.986137 },
-  { code: "IN", name: "Indiana",        lat: 39.849426,  lng: -86.258278 },
-  { code: "IA", name: "Iowa",           lat: 42.011539,  lng: -93.210526 },
-  { code: "KS", name: "Kansas",         lat: 38.526600,  lng: -96.726486 },
-  { code: "KY", name: "Kentucky",       lat: 37.668140,  lng: -84.670067 },
-  { code: "LA", name: "Louisiana",      lat: 31.169546,  lng: -91.867805 },
-  { code: "ME", name: "Maine",          lat: 44.693947,  lng: -69.381927 },
-  { code: "MD", name: "Maryland",       lat: 39.063946,  lng: -76.802101 },
-  { code: "MA", name: "Massachusetts",  lat: 42.230171,  lng: -71.530106 },
-  { code: "MI", name: "Michigan",       lat: 43.326618,  lng: -84.536095 },
-  { code: "MN", name: "Minnesota",      lat: 45.694454,  lng: -93.900192 },
-  { code: "MS", name: "Mississippi",    lat: 32.741646,  lng: -89.678696 },
-  { code: "MO", name: "Missouri",       lat: 38.456085,  lng: -92.288368 },
-  { code: "MT", name: "Montana",        lat: 46.921925,  lng: -110.454353 },
-  { code: "NE", name: "Nebraska",       lat: 41.125370,  lng: -98.268082 },
-  { code: "NV", name: "Nevada",         lat: 38.313515,  lng: -117.055374 },
-  { code: "NH", name: "New Hampshire",  lat: 43.452492,  lng: -71.563896 },
-  { code: "NJ", name: "New Jersey",     lat: 40.298904,  lng: -74.521011 },
-  { code: "NM", name: "New Mexico",     lat: 34.840515,  lng: -106.248482 },
-  { code: "NY", name: "New York",       lat: 42.165726,  lng: -74.948051 },
-  { code: "NC", name: "North Carolina", lat: 35.630066,  lng: -79.806419 },
-  { code: "ND", name: "North Dakota",   lat: 47.528912,  lng: -99.784012 },
-  { code: "OH", name: "Ohio",           lat: 40.388783,  lng: -82.764915 },
-  { code: "OK", name: "Oklahoma",       lat: 35.565342,  lng: -96.928917 },
-  { code: "OR", name: "Oregon",         lat: 44.572021,  lng: -122.070938 },
-  { code: "PA", name: "Pennsylvania",   lat: 40.590752,  lng: -77.209755 },
-  { code: "RI", name: "Rhode Island",   lat: 41.680893,  lng: -71.511780 },
-  { code: "SC", name: "South Carolina", lat: 33.856892,  lng: -80.945007 },
-  { code: "SD", name: "South Dakota",   lat: 44.299782,  lng: -99.438828 },
-  { code: "TN", name: "Tennessee",      lat: 35.747845,  lng: -86.692345 },
-  { code: "TX", name: "Texas",          lat: 31.054487,  lng: -97.563461 },
-  { code: "UT", name: "Utah",           lat: 40.150032,  lng: -111.862434 },
-  { code: "VT", name: "Vermont",        lat: 44.045876,  lng: -72.710686 },
-  { code: "VA", name: "Virginia",       lat: 37.769337,  lng: -78.169968 },
-  { code: "WA", name: "Washington",     lat: 47.400902,  lng: -121.490494 },
-  { code: "WV", name: "West Virginia",  lat: 38.491226,  lng: -80.954453 },
-  { code: "WI", name: "Wisconsin",      lat: 44.268543,  lng: -89.616508 },
-  { code: "WY", name: "Wyoming",        lat: 42.755966,  lng: -107.302490 }
+  { code: "AL", name: "Alabama",        lat: 32.377716,  lng: -86.300568 },  // Montgomery
+  { code: "AK", name: "Alaska",         lat: 58.301598,  lng: -134.420212 }, // Juneau
+  { code: "AZ", name: "Arizona",        lat: 33.448143,  lng: -112.096962 }, // Phoenix
+  { code: "AR", name: "Arkansas",       lat: 34.746613,  lng: -92.288986 },  // Little Rock
+  { code: "CA", name: "California",     lat: 38.576668,  lng: -121.493629 }, // Sacramento
+  { code: "CO", name: "Colorado",       lat: 39.739227,  lng: -104.984856 }, // Denver
+  { code: "CT", name: "Connecticut",    lat: 41.764046,  lng: -72.682198 },  // Hartford
+  { code: "DE", name: "Delaware",       lat: 39.157307,  lng: -75.519722 },  // Dover
+  { code: "DC", name: "Washington DC",  lat: 38.907192,  lng: -77.036873 },  // Washington
+  { code: "FL", name: "Florida",        lat: 30.438118,  lng: -84.281296 },  // Tallahassee
+  { code: "GA", name: "Georgia",        lat: 33.749027,  lng: -84.388229 },  // Atlanta
+  { code: "HI", name: "Hawaii",         lat: 21.307442,  lng: -157.857376 }, // Honolulu
+  { code: "ID", name: "Idaho",          lat: 43.617775,  lng: -116.199722 }, // Boise
+  { code: "IL", name: "Illinois",       lat: 39.798363,  lng: -89.654961 },  // Springfield
+  { code: "IN", name: "Indiana",        lat: 39.768623,  lng: -86.162643 },  // Indianapolis
+  { code: "IA", name: "Iowa",           lat: 41.591087,  lng: -93.603729 },  // Des Moines
+  { code: "KS", name: "Kansas",         lat: 39.048191,  lng: -95.677956 },  // Topeka
+  { code: "KY", name: "Kentucky",       lat: 38.197273,  lng: -84.863577 },  // Frankfort
+  { code: "LA", name: "Louisiana",      lat: 30.457069,  lng: -91.187393 },  // Baton Rouge
+  { code: "ME", name: "Maine",          lat: 44.307167,  lng: -69.781693 },  // Augusta
+  { code: "MD", name: "Maryland",       lat: 38.978764,  lng: -76.490936 },  // Annapolis
+  { code: "MA", name: "Massachusetts",  lat: 42.358162,  lng: -71.063698 },  // Boston
+  { code: "MI", name: "Michigan",       lat: 42.733635,  lng: -84.555328 },  // Lansing
+  { code: "MN", name: "Minnesota",      lat: 44.955097,  lng: -93.102211 },  // Saint Paul
+  { code: "MS", name: "Mississippi",    lat: 32.303848,  lng: -90.182106 },  // Jackson
+  { code: "MO", name: "Missouri",       lat: 38.579201,  lng: -92.172935 },  // Jefferson City
+  { code: "MT", name: "Montana",        lat: 46.585709,  lng: -112.018417 }, // Helena
+  { code: "NE", name: "Nebraska",       lat: 40.808075,  lng: -96.699654 },  // Lincoln
+  { code: "NV", name: "Nevada",         lat: 39.163914,  lng: -119.766121 }, // Carson City
+  { code: "NH", name: "New Hampshire",  lat: 43.206898,  lng: -71.537994 },  // Concord
+  { code: "NJ", name: "New Jersey",     lat: 40.220596,  lng: -74.769913 },  // Trenton
+  { code: "NM", name: "New Mexico",     lat: 35.682240,  lng: -105.939728 }, // Santa Fe
+  { code: "NY", name: "New York",       lat: 42.652579,  lng: -73.756233 },  // Albany
+  { code: "NC", name: "North Carolina", lat: 35.780430,  lng: -78.639099 },  // Raleigh
+  { code: "ND", name: "North Dakota",   lat: 46.820850,  lng: -100.783318 }, // Bismarck
+  { code: "OH", name: "Ohio",           lat: 39.961346,  lng: -82.999069 },  // Columbus
+  { code: "OK", name: "Oklahoma",       lat: 35.492207,  lng: -97.503342 },  // Oklahoma City
+  { code: "OR", name: "Oregon",         lat: 44.938461,  lng: -123.030403 }, // Salem
+  { code: "PA", name: "Pennsylvania",   lat: 40.264378,  lng: -76.883598 },  // Harrisburg
+  { code: "RI", name: "Rhode Island",   lat: 41.830914,  lng: -71.414963 },  // Providence
+  { code: "SC", name: "South Carolina", lat: 34.000343,  lng: -81.033211 },  // Columbia
+  { code: "SD", name: "South Dakota",   lat: 44.367031,  lng: -100.346405 }, // Pierre
+  { code: "TN", name: "Tennessee",      lat: 36.165890,  lng: -86.784443 },  // Nashville
+  { code: "TX", name: "Texas",          lat: 30.274670,  lng: -97.740349 },  // Austin
+  { code: "UT", name: "Utah",           lat: 40.777477,  lng: -111.888237 }, // Salt Lake City
+  { code: "VT", name: "Vermont",        lat: 44.262436,  lng: -72.580536 },  // Montpelier
+  { code: "VA", name: "Virginia",       lat: 37.538857,  lng: -77.433640 },  // Richmond
+  { code: "WA", name: "Washington",     lat: 47.035805,  lng: -122.905014 }, // Olympia
+  { code: "WV", name: "West Virginia",  lat: 38.336246,  lng: -81.612328 },  // Charleston
+  { code: "WI", name: "Wisconsin",      lat: 43.074684,  lng: -89.384445 },  // Madison
+  { code: "WY", name: "Wyoming",        lat: 41.140259,  lng: -104.820236 }  // Cheyenne
 ];
 
 /* ============================================================================

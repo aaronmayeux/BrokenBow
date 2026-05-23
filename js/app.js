@@ -1009,20 +1009,88 @@
     fn();
   }
 
-  /* --- accordions: open the target section's <details> from nav / hash --- */
-  function openDetailsIn(target) {
-    if (!target) return;
-    var det = target.tagName === "DETAILS" ? target : target.querySelector("details.acc");
-    if (det && !det.open) { det.open = true; revealWithin(det); }
-  }
+  /* --- accordions: JS-driven height animation (open AND close, everywhere) --- */
+  var REDUCED = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
   function revealWithin(scope) {
     scope.querySelectorAll(".reveal").forEach(function (el) { el.classList.add("in"); });
   }
-  function initAccordions() {
-    // Reveal content as a section is expanded (IO can't see display:none children).
-    document.querySelectorAll("details.acc").forEach(function (det) {
-      det.addEventListener("toggle", function () { if (det.open) revealWithin(det); });
+  function bodyOf(det) { return det.querySelector(".acc-body"); }
+
+  function animateOpen(det) {
+    det.open = true;            // content must be in flow before we can measure it
+    revealWithin(det);
+    var body = bodyOf(det);
+    if (!body || REDUCED) { syncToggleAll(); return; }
+    body.classList.add("acc-animating");
+    body.style.height = "0px";
+    var target = body.scrollHeight;
+    requestAnimationFrame(function () { body.style.height = target + "px"; });
+    body.addEventListener("transitionend", function te(e) {
+      if (e.propertyName !== "height") return;
+      body.style.height = ""; body.classList.remove("acc-animating");
+      body.removeEventListener("transitionend", te);
     });
+    syncToggleAll();
+  }
+  function animateClose(det) {
+    var body = bodyOf(det);
+    if (!body || REDUCED) { det.open = false; syncToggleAll(); return; }
+    body.classList.add("acc-animating");
+    body.style.height = body.scrollHeight + "px";
+    requestAnimationFrame(function () { body.style.height = "0px"; });
+    body.addEventListener("transitionend", function te(e) {
+      if (e.propertyName !== "height") return;
+      det.open = false; body.style.height = ""; body.classList.remove("acc-animating");
+      body.removeEventListener("transitionend", te);
+      syncToggleAll();
+    });
+  }
+  // Open the target section's <details> from nav / hash (animated).
+  function openDetailsIn(target) {
+    if (!target) return;
+    var det = target.tagName === "DETAILS" ? target : target.querySelector("details.acc");
+    if (det && !det.open) animateOpen(det);
+  }
+
+  /* --- Expand all / Collapse all toggle (lives in the sticky nav) --- */
+  function allAccordions() { return document.querySelectorAll("details.acc"); }
+  function allAreOpen() {
+    var all = allAccordions(), open = 0;
+    all.forEach(function (d) { if (d.open) open++; });
+    return all.length > 0 && open === all.length;
+  }
+  function syncToggleAll() {
+    var btn = $("toggleAll"); if (!btn) return;
+    var open = allAreOpen();
+    btn.textContent = open ? "Collapse all" : "Expand all";
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  function setAll(open) {
+    // Bulk action snaps (animating ~11 sections at once is janky); content still revealed.
+    allAccordions().forEach(function (det) {
+      if (open) { if (!det.open) { det.open = true; revealWithin(det); } }
+      else { if (det.open) det.open = false; }
+    });
+    syncToggleAll();
+  }
+
+  function initAccordions() {
+    // Drive open/close ourselves so both directions animate every time.
+    allAccordions().forEach(function (det) {
+      var summary = det.querySelector("summary");
+      if (summary) {
+        summary.addEventListener("click", function (e) {
+          e.preventDefault();
+          if (det.open) animateClose(det); else animateOpen(det);
+        });
+      }
+      // Keep content revealed + label synced if state changes any other way.
+      det.addEventListener("toggle", function () { if (det.open) revealWithin(det); syncToggleAll(); });
+    });
+    // The sticky Expand/Collapse-all toggle.
+    var tbtn = $("toggleAll");
+    if (tbtn) tbtn.addEventListener("click", function () { setAll(!allAreOpen()); });
     // Nav links auto-open their destination before the browser scrolls to it.
     document.querySelectorAll('.nav-links a[href^="#"]').forEach(function (link) {
       link.addEventListener("click", function () {
@@ -1033,6 +1101,7 @@
     function fromHash() { if (location.hash) openDetailsIn(document.querySelector(location.hash)); }
     window.addEventListener("hashchange", fromHash);
     fromHash();
+    syncToggleAll();
   }
 
   /* --- staggered reveal on scroll --- */
