@@ -16,6 +16,7 @@
 
   /* ----- helpers ----- */
   function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 
   // Current time in Hochatown (America/Chicago), order-independent.
   function nowChicago() {
@@ -49,18 +50,78 @@
     return { state: open ? "open" : "closed", label: open ? "Open now" : "Closed now" };
   }
 
-  function dirUrl(lat, lng) {
-    return "https://www.google.com/maps/dir/?api=1&destination=" + lat + "," + lng;
+  /* ----- Google Maps links -------------------------------------------------
+     Locked decision (#26):
+       • travelDay items (drive-up stops, scenic-home stops, cabin) → DIRECTIONS
+       • everything else (activities, restaurants, provisions)      → place LISTING
+     query_place_id lands on the exact business card when we have a real ID. */
+  function mapsPlaceUrl(p) {
+    var base = "https://www.google.com/maps/search/?api=1&query=";
+    if (p.placeId) return base + encodeURIComponent(p.name) + "&query_place_id=" + p.placeId;
+    return base + encodeURIComponent(p.name + " " + p.lat + "," + p.lng);
+  }
+  function mapsDirUrl(p) {
+    var u = "https://www.google.com/maps/dir/?api=1&destination=" + p.lat + "," + p.lng;
+    if (p.placeId) u += "&destination_place_id=" + p.placeId;
+    return u;
+  }
+  // Returns { url, label } honoring the travel-day split.
+  function mapsLink(p) {
+    return p.travelDay
+      ? { url: mapsDirUrl(p),   label: "Directions ↗" }
+      : { url: mapsPlaceUrl(p), label: "View on Maps ↗" };
+  }
+  function mapsAnchor(p, cls) {
+    var m = mapsLink(p);
+    return '<a class="dir' + (cls ? " " + cls : "") + '" href="' + m.url +
+      '" target="_blank" rel="noopener">' + m.label + "</a>";
   }
 
-  function tagHtml(hours) {
+  /* ----- pill / chip builders ----- */
+  function catClass(category) {
+    return "cat-" + String(category || "").toLowerCase().replace(/[^a-z]/g, "");
+  }
+
+  // Open / closed / hours / call-ahead pills.
+  function hoursTags(hours) {
     if (!hours) return "";
     var info = openInfo(hours);
     var cls = info.state === "open" ? "tag open" : info.state === "closed" ? "tag closed" : "tag";
     var h = info.label ? '<span class="' + cls + '">' + info.label + "</span>" : "";
-    if (hours.label) h += '<span class="tag hours">' + hours.label + "</span>";
+    if (hours.label) h += '<span class="tag hours">' + esc(hours.label) + "</span>";
     if (hours.callAhead) h += '<span class="tag call">call ahead</span>';
     return h;
+  }
+
+  // Action flags (open vocabulary).
+  function flagTags(p) {
+    if (!p.flags || !p.flags.length) return "";
+    return p.flags.map(function (f) { return '<span class="tag flag">' + esc(f) + "</span>"; }).join("");
+  }
+
+  // Price tier pill ($/$$/$$$).
+  function priceTag(p) {
+    return p.priceTier ? '<span class="tag price">' + p.priceTier + "</span>" : "";
+  }
+
+  // Rating: single star + value + review count, with honest "as of" tooltip.
+  function ratingHtml(p) {
+    if (p.rating == null) return "";
+    var cnt = p.ratingCount ? ' <span class="rcount">(' + p.ratingCount.toLocaleString() + ")</span>" : "";
+    return '<span class="rating" title="Google rating · as of ' + RATINGS_AS_OF + ' · tap the Maps link for live">' +
+      '<span class="star">★</span>' + p.rating.toFixed(1) + cnt + "</span>";
+  }
+
+  // Real $ detail line (only where we know it).
+  function priceDetailHtml(p) {
+    if (!p.priceDetail) return "";
+    return '<p class="price-detail">' + (p.priceTier ? p.priceTier + " · " : "") + esc(p.priceDetail) + "</p>";
+  }
+
+  // "Pick this if you feel like…" recommendation line.
+  function pickIfHtml(p) {
+    if (!p.pickIf) return "";
+    return '<p class="pickif">' + esc(p.pickIf) + "</p>";
   }
 
   function md(date) { return parseInt(date.slice(5, 7), 10) + "/" + parseInt(date.slice(8, 10), 10); }
@@ -81,6 +142,7 @@
   function renderHero() {
     $("roster").textContent = TRIP.family.map(function (f) { return f.name; }).join("  ·  ");
     $("tagline").textContent = TRIP.tagline;
+    var b = $("banner"); if (b && typeof BANNER === "string") b.textContent = BANNER;
   }
 
   /* --- live countdown (to departure → check-in → checkout) --- */
@@ -114,15 +176,15 @@
     if (day) {
       var anchors = [day.anchor, day.anchor2].filter(Boolean).map(function (id) {
         var a = ACT_BY_ID[id]; if (!a) return "";
-        return '<a class="dir" href="' + dirUrl(a.lat, a.lng) + '" target="_blank" rel="noopener">' + a.name + " ↗</a>";
+        return '<a class="dir" href="' + mapsPlaceUrl(a) + '" target="_blank" rel="noopener">' + esc(a.name) + " ↗</a>";
       }).join("<br>");
       html = '<div class="card"><div class="card-head"><h3>Today · ' + day.dow + " " + md(day.date) +
-        '</h3></div><p class="blurb"><strong>' + day.title + "</strong></p><p class=\"notes\">" + day.notes + "</p>" +
+        '</h3></div><p class="blurb"><strong>' + esc(day.title) + "</strong></p><p class=\"notes\">" + esc(day.notes) + "</p>" +
         (anchors ? '<p style="margin-top:8px">' + anchors + "</p>" : "") + "</div>";
     } else if (today < TRIP.dates.start) {
       var first = STAY_DAYS[0];
       html = '<div class="card"><h3>Not there yet — but soon!</h3><p class="blurb">First up: <strong>' +
-        first.title + "</strong> on " + first.dow + " " + md(first.date) + ".</p><p class=\"notes\">" + first.notes + "</p></div>";
+        esc(first.title) + "</strong> on " + first.dow + " " + md(first.date) + ".</p><p class=\"notes\">" + esc(first.notes) + "</p></div>";
     } else {
       html = '<div class="card"><h3>Trip complete</h3><p class="blurb">Hope Broken Bow was everything. ' +
         "Time to plan the next one.</p></div>";
@@ -169,31 +231,31 @@
   /* --- drive up (Leg 1) --- */
   function renderDriveUp() {
     var u = DRIVE_UP;
-    var chips = u.path.map(function (p) { return "<span>" + p + "</span>"; }).join("");
+    var chips = u.path.map(function (p) { return "<span>" + esc(p) + "</span>"; }).join("");
     var stops = u.stops.map(function (s) {
-      var dir = (s.lat ? ' <a class="dir" href="' + dirUrl(s.lat, s.lng) + '" target="_blank" rel="noopener">map ↗</a>' : "");
-      return '<div class="tl-item"><div class="tl-when">' + s.when + " · " + s.name + dir +
-        '</div><div class="tl-note">' + s.note + "</div></div>";
+      var dir = (s.lat ? " " + mapsAnchor({ name: s.name, lat: s.lat, lng: s.lng, placeId: s.placeId, travelDay: true }, "inline").replace("View on Maps", "Map").replace("Directions ↗", "map ↗") : "");
+      return '<div class="tl-item"><div class="tl-when">' + esc(s.when) + " · " + esc(s.name) + dir +
+        '</div><div class="tl-note">' + esc(s.note) + "</div></div>";
     }).join("");
     $("drive").innerHTML =
-      '<p class="lead">' + u.distanceMi + " · " + u.driveTime + ". Suggested departure <strong>" + u.departSuggested +
-      "</strong> to clear the " + u.checkIn + " check-in with buffer.</p>" +
+      '<p class="lead">' + esc(u.distanceMi) + " · " + esc(u.driveTime) + ". Suggested departure <strong>" + esc(u.departSuggested) +
+      "</strong> to clear the " + esc(u.checkIn) + " check-in with buffer.</p>" +
       '<div class="route-chips">' + chips + "</div>" +
       '<div class="timeline">' + stops +
-      '<div class="tl-item"><div class="tl-when">' + u.arrive + " · Arrive Hochatown</div>" +
-      '<div class="tl-note">Check in at ' + u.checkIn + ". " +
-      '<a class="dir" href="' + dirUrl(TRIP.lodging.lat, TRIP.lodging.lng) + '" target="_blank" rel="noopener">cabin directions ↗</a></div></div></div>';
+      '<div class="tl-item"><div class="tl-when">' + esc(u.arrive) + " · Arrive Hochatown</div>" +
+      '<div class="tl-note">Check in at ' + esc(u.checkIn) + ". " +
+      '<a class="dir" href="' + mapsDirUrl(TRIP.lodging) + '" target="_blank" rel="noopener">cabin directions ↗</a></div></div></div>';
   }
 
   /* --- the stay (Leg 2) --- */
   function dayCard(d) {
     var anchors = [d.anchor, d.anchor2].filter(Boolean).map(function (id) {
       var a = ACT_BY_ID[id]; if (!a) return "";
-      return '<a class="dir" href="' + dirUrl(a.lat, a.lng) + '" target="_blank" rel="noopener">' + a.name + " ↗</a>";
+      return '<a class="dir" href="' + mapsPlaceUrl(a) + '" target="_blank" rel="noopener">' + esc(a.name) + " ↗</a>";
     }).join("<br>");
     return '<div class="card reveal day ' + (d.type === "travel" ? "travel" : "") + '">' +
       '<div class="day-date"><div class="dow">' + d.dow + '</div><div class="dnum">' + parseInt(d.date.slice(8, 10), 10) + "</div></div>" +
-      '<div class="day-body"><h3>' + d.title + "</h3><p class=\"notes\">" + d.notes + "</p>" +
+      '<div class="day-body"><h3>' + esc(d.title) + "</h3><p class=\"notes\">" + esc(d.notes) + "</p>" +
       (anchors ? '<p style="margin-top:6px">' + anchors + "</p>" : "") + "</div></div>";
   }
   function renderStay() { $("stay").innerHTML = STAY_DAYS.map(dayCard).join(""); }
@@ -206,15 +268,18 @@
       var voters = TRIP.family.map(function (f) {
         var on = (votes[a.id] || []).indexOf(f.name) >= 0;
         return '<button class="voter ' + (on ? "on" : "") + '" data-act="' + a.id + '" data-person="' +
-          f.name + '" title="' + f.name + '">' + f.name.charAt(0) + "</button>";
+          esc(f.name) + '" title="' + esc(f.name) + '">' + esc(f.name.charAt(0)) + "</button>";
       }).join("");
       var n = (votes[a.id] || []).length;
-      return '<article class="card act reveal"><div class="card-head"><h3>' + a.name + "</h3>" + anchor + "</div>" +
-        '<div class="tags">' + tagHtml(a.hours) + '<span class="tag cat">' + a.category + "</span></div>" +
-        '<p class="blurb">' + a.blurb + '</p><p class="notes">' + a.notes + "</p>" +
+      return '<article class="card act reveal ' + catClass(a.category) + '"><div class="card-head"><h3>' + esc(a.name) + "</h3>" + anchor + "</div>" +
+        '<div class="tags"><span class="tag cat ' + catClass(a.category) + '">' + esc(a.category) + "</span>" +
+        priceTag(a) + hoursTags(a.hours) + ratingHtml(a) + "</div>" +
+        '<div class="tags flags-row">' + flagTags(a) + "</div>" +
+        '<p class="blurb">' + esc(a.blurb) + '</p><p class="notes">' + esc(a.notes) + "</p>" +
+        priceDetailHtml(a) + pickIfHtml(a) +
         '<div class="vote-row"><span class="vote-label">Who\'s in?</span><div class="voters">' + voters +
         '</div><span class="tally" data-tally="' + a.id + '">' + n + " vote" + (n === 1 ? "" : "s") + "</span></div>" +
-        '<a class="dir" href="' + dirUrl(a.lat, a.lng) + '" target="_blank" rel="noopener">Directions ↗</a></article>';
+        '<a class="dir" href="' + mapsPlaceUrl(a) + '" target="_blank" rel="noopener">View on Maps ↗</a></article>';
     }).join("");
 
     $("activities").addEventListener("click", function (e) {
@@ -230,37 +295,66 @@
     });
   }
 
-  /* --- generic place cards (restaurants / provisions) --- */
-  function placeCards(list) {
-    return list.map(function (p) {
-      return '<article class="card reveal"><div class="card-head"><h3>' + p.name +
-        '</h3><span class="tag cat">' + p.type + "</span></div>" +
-        '<div class="tags">' + tagHtml(p.hours) + "</div>" +
-        '<p class="notes" style="margin-top:8px">' + p.notes + "</p>" +
-        '<a class="dir" href="' + dirUrl(p.lat, p.lng) + '" target="_blank" rel="noopener">Directions ↗</a></article>';
+  /* --- restaurants (cuisine pills + optional filter) --- */
+  function restaurantCard(p) {
+    return '<article class="card reveal" data-cuisine="' + esc(p.cuisine) + '"><div class="card-head"><h3>' + esc(p.name) +
+      '</h3>' + ratingHtml(p) + "</div>" +
+      '<div class="tags"><span class="tag cuisine">' + esc(p.cuisine) + "</span>" + priceTag(p) + hoursTags(p.hours) + "</div>" +
+      '<div class="tags flags-row">' + flagTags(p) + "</div>" +
+      '<p class="notes" style="margin-top:8px">' + esc(p.notes) + "</p>" +
+      priceDetailHtml(p) + pickIfHtml(p) +
+      '<a class="dir" href="' + mapsPlaceUrl(p) + '" target="_blank" rel="noopener">View on Maps ↗</a></article>';
+  }
+  function renderEat() {
+    // optional cuisine filter (session-only)
+    var cuisines = [];
+    RESTAURANTS.forEach(function (r) { if (cuisines.indexOf(r.cuisine) < 0) cuisines.push(r.cuisine); });
+    var chips = '<button class="filter-chip on" data-cuisine="all">All</button>' +
+      cuisines.map(function (c) { return '<button class="filter-chip" data-cuisine="' + esc(c) + '">' + esc(c) + "</button>"; }).join("");
+    $("eat-filter").innerHTML = chips;
+    $("eat").innerHTML = RESTAURANTS.map(restaurantCard).join("");
+
+    $("eat-filter").addEventListener("click", function (e) {
+      var b = e.target.closest(".filter-chip"); if (!b) return;
+      var pick = b.dataset.cuisine;
+      $("eat-filter").querySelectorAll(".filter-chip").forEach(function (c) { c.classList.toggle("on", c === b); });
+      $("eat").querySelectorAll(".card").forEach(function (card) {
+        card.style.display = (pick === "all" || card.dataset.cuisine === pick) ? "" : "none";
+      });
+    });
+  }
+
+  /* --- provisions --- */
+  function renderShop() {
+    $("shop").innerHTML = PROVISIONS.map(function (p) {
+      return '<article class="card reveal"><div class="card-head"><h3>' + esc(p.name) +
+        '</h3>' + ratingHtml(p) + "</div>" +
+        '<div class="tags"><span class="tag cuisine">' + esc(p.type) + "</span>" + priceTag(p) + hoursTags(p.hours) + "</div>" +
+        '<div class="tags flags-row">' + flagTags(p) + "</div>" +
+        '<p class="notes" style="margin-top:8px">' + esc(p.notes) + "</p>" +
+        priceDetailHtml(p) +
+        '<a class="dir" href="' + mapsPlaceUrl(p) + '" target="_blank" rel="noopener">View on Maps ↗</a></article>';
     }).join("");
   }
-  function renderEat()  { $("eat").innerHTML = placeCards(RESTAURANTS); }
-  function renderShop() { $("shop").innerHTML = placeCards(PROVISIONS); }
 
   /* --- scenic route home (Leg 3) + Fort Rosalie sidebar --- */
   function renderHome() {
     var days = SCENIC_HOME.map(function (d) {
       var stops = d.stops.map(function (id) {
         var s = LEG3_BY_ID[id]; if (!s) return "";
-        return '<p class="blurb"><strong>' + s.name + "</strong> <span class=\"muted\">· " + s.region +
-          '</span><br><span class="notes">' + s.blurb + " " + s.notes + "</span><br>" +
-          '<a class="dir" href="' + dirUrl(s.lat, s.lng) + '" target="_blank" rel="noopener">Directions ↗</a></p>';
+        return '<p class="blurb"><strong>' + esc(s.name) + "</strong> <span class=\"muted\">· " + esc(s.region) +
+          "</span>" + (s.rating != null ? " " + ratingHtml(s) : "") + "<br><span class=\"notes\">" + esc(s.blurb) + " " + esc(s.notes) + "</span>" +
+          (s.priceDetail ? '<br><span class="price-detail">' + esc(s.priceDetail) + "</span>" : "") +
+          '<br>' + mapsAnchor(s) + "</p>";
       }).join("");
       return '<div class="card reveal day"><div class="day-date"><div class="dow">' + d.dow + '</div><div class="dnum">' +
-        parseInt(d.date.slice(8, 10), 10) + '</div></div><div class="day-body"><h3>' + d.title + "</h3>" + stops +
-        (d.overnight ? '<p class="overnight">Overnight: ' + d.overnight + "</p>" : '<p class="overnight">Home sweet home</p>') +
+        parseInt(d.date.slice(8, 10), 10) + '</div></div><div class="day-body"><h3>' + esc(d.title) + "</h3>" + stops +
+        (d.overnight ? '<p class="overnight">Overnight: ' + esc(d.overnight) + "</p>" : '<p class="overnight">Home sweet home</p>') +
         "</div></div>";
     }).join("");
     var f = FORT_ROSALIE;
-    var sidebar = '<div class="sidebar reveal"><h3>' + f.title + '</h3><p class="blurb">' + f.body +
-      '</p><p class="notes">' + f.hours + ' · <a class="dir" href="' + dirUrl(f.lat, f.lng) +
-      '" target="_blank" rel="noopener">Directions ↗</a></p><p class="footnote">' + f.footnote + "</p></div>";
+    var sidebar = '<div class="sidebar reveal"><h3>' + esc(f.title) + '</h3><p class="blurb">' + esc(f.body) +
+      '</p><p class="notes">' + esc(f.hours) + ' · ' + mapsAnchor(f) + "</p><p class=\"footnote\">" + esc(f.footnote) + "</p></div>";
     $("home").innerHTML = days + sidebar;
   }
 
@@ -268,10 +362,10 @@
   function renderPacking() {
     var state = load(PKEY), total = 0, done = 0;
     var html = PACKING.map(function (g) {
-      return '<div class="check-group"><h3>' + g.group + "</h3>" + g.items.map(function (item) {
+      return '<div class="check-group"><h3>' + esc(g.group) + "</h3>" + g.items.map(function (item) {
         var key = g.group + "|" + item, on = !!state[key]; total++; if (on) done++;
-        return '<label class="check ' + (on ? "done" : "") + '"><input type="checkbox" data-pk="' + key +
-          '" ' + (on ? "checked" : "") + "><span>" + item + "</span></label>";
+        return '<label class="check ' + (on ? "done" : "") + '"><input type="checkbox" data-pk="' + esc(key) +
+          '" ' + (on ? "checked" : "") + "><span>" + esc(item) + "</span></label>";
       }).join("") + "</div>";
     }).join("");
     $("packing").innerHTML = '<p class="progress" id="pk-prog">' + done + " / " + total + " packed</p>" + html;
@@ -292,7 +386,7 @@
     var html = SCAVENGER_HUNT.map(function (item, i) {
       var on = !!state[i]; if (on) done++;
       return '<label class="check ' + (on ? "done" : "") + '"><input type="checkbox" data-sc="' + i +
-        '" ' + (on ? "checked" : "") + "><span>" + item + "</span></label>";
+        '" ' + (on ? "checked" : "") + "><span>" + esc(item) + "</span></label>";
     }).join("");
     $("scavenger").innerHTML = '<p class="progress" id="sc-prog">' + done + " / " + SCAVENGER_HUNT.length + " found</p>" + html;
     $("scavenger").addEventListener("change", function (e) {
@@ -326,14 +420,14 @@
     });
   }
 
-  /* --- theme toggle (campfire) --- */
+  /* --- theme toggle (campfire) — LIGHT DEFAULT, manual only (no auto-night) --- */
   function applyTheme(t) {
     document.documentElement.setAttribute("data-theme", t);
     var b = $("themeToggle"); if (b) b.textContent = (t === "night" ? "Daylight" : "Campfire");
   }
   function initTheme() {
     var t = null; try { t = localStorage.getItem(TKEY); } catch (e) {}
-    if (!t) { var h = nowChicago().hh; t = (h >= 19 || h < 7) ? "night" : "day"; }
+    if (t !== "night" && t !== "day") t = "day";  // default daylight; never auto-switch by clock
     applyTheme(t);
     var b = $("themeToggle");
     if (b) b.addEventListener("click", function () {
@@ -375,6 +469,32 @@
     }
   }
 
+  /* --- accordions: open the target section's <details> from nav / hash --- */
+  function openDetailsIn(target) {
+    if (!target) return;
+    var det = target.tagName === "DETAILS" ? target : target.querySelector("details.acc");
+    if (det && !det.open) { det.open = true; revealWithin(det); }
+  }
+  function revealWithin(scope) {
+    scope.querySelectorAll(".reveal").forEach(function (el) { el.classList.add("in"); });
+  }
+  function initAccordions() {
+    // Reveal content as a section is expanded (IO can't see display:none children).
+    document.querySelectorAll("details.acc").forEach(function (det) {
+      det.addEventListener("toggle", function () { if (det.open) revealWithin(det); });
+    });
+    // Nav links auto-open their destination before the browser scrolls to it.
+    document.querySelectorAll('.nav-links a[href^="#"]').forEach(function (link) {
+      link.addEventListener("click", function () {
+        openDetailsIn(document.querySelector(link.getAttribute("href")));
+      });
+    });
+    // Direct load with a hash (or later hashchange).
+    function fromHash() { if (location.hash) openDetailsIn(document.querySelector(location.hash)); }
+    window.addEventListener("hashchange", fromHash);
+    fromHash();
+  }
+
   /* --- staggered reveal on scroll --- */
   function initReveal() {
     if (!("IntersectionObserver" in window)) {
@@ -406,6 +526,7 @@
     safe(initTheme);
     safe(function () { $("year").textContent = new Date().getFullYear(); });
     safe(function () { $("heroBadge").addEventListener("click", confetti); });
+    safe(initAccordions);
     safe(initReveal);
     safe(tickCountdown); setInterval(function () { safe(tickCountdown); }, 1000);
     safe(loadWeather);

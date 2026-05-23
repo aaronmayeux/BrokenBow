@@ -4,7 +4,12 @@
 
    Conventions
    -----------
-   • Coordinates verified via Google Places (Leg 3 confirmed this session).
+   • Coordinates + Google Place IDs verified via Google Places (May 2026).
+   • ratings/ratingCount are point-in-time SNAPSHOTS (May 2026). The live value
+     is one tap away in Google Maps — see the "as of" caveat in the UI.
+   • placeId = real Google Place ID (ChIJ…). Powers the place-listing deep link.
+     Natchitoches has none on purpose (the only correct pin is the district,
+     not a business — see note there).
    • Times are local Central (CDT in June = UTC-05:00).
    • hours = { default:{open,close}, overrides:{ "0".."6": {open,close} | null }, ... }
        - Day keys are JS getDay(): 0=Sun … 6=Sat.
@@ -13,6 +18,17 @@
        - A day absent from `overrides`                 => use `default`.
        - alwaysOpen:true overrides everything (24h).
        - "open now" is BEST-EFFORT. callAhead:true = verify before driving.
+       - Hours are May-2026 snapshots; summer hours may run later — flagged.
+   • priceTier  = "$" | "$$" | "$$$"  (from Google price level; null = unknown).
+   • priceDetail = real dollar figures where we actually know them.
+   • flags = SHORT action verbs/notes (open vocabulary): "buy ahead", "reserve",
+     "cash only", "call ahead", "closes early", "porta-potties"… Closed-days are
+     NOT flags (the hours pill already shows them — no duplication).
+   • pickIf = friendly "pick this if you feel like…" one-liner shown on the card.
+   • category (activities): Outdoors | Animals | Play | Indoors  → palette tint.
+   • cuisine (restaurants): plain-text pill, NO per-cuisine color.
+   • Family note: a 1-yr-old (Siena) tags along everywhere — picks favor calm,
+     shallow water + toddler-paced trails, and dinners that welcome small kids.
    • Globals are plain consts loaded via <script src> — shared window scope.
    ========================================================================== */
 
@@ -29,7 +45,9 @@ const TRIP = {
     vrboUrl: "https://www.vrbo.com/2831195",
     lat: 34.06484,
     lng: -94.75162,
-    address: null, // TODO: exact street address — drop the booking link and I'll wire it in
+    placeId: null,                 // map pin only until the booking address arrives
+    address: null,                 // TODO: exact street address — from booking email
+    travelDay: true,               // → Google Maps DIRECTIONS (not a place listing)
     blurb: "Private pool, hot tub, firepit, full kitchen, A/C, bunks. 10/10 over 55 reviews.",
     notes: "Just S of the Hochatown strip · ~10 min to attractions · ~5 min to Pruett's.",
     checkIn: "2026-06-07T16:00:00-05:00",  // 4:00 PM CDT, Sun June 7
@@ -50,13 +68,20 @@ const TRIP = {
   ]
 };
 
+/* One trip-wide banner replaces the repeated "no cell service" card notes. */
+const BANNER = "No cell service at the cabin or most trails — screenshot your maps before you head out.";
+
+/* Snapshot date shown beside ratings so drift is honest. */
+const RATINGS_AS_OF = "May 2026";
+
 /* Open-Meteo location (keyless). Hochatown / Beavers Bend. */
 const WEATHER = { lat: 34.1657, lng: -94.7572, label: "Hochatown, OK" };
 
 /* ============================================================================
-   ACTIVITIES — anchors + swappable menu.
+   ACTIVITIES (12) — anchors + swappable menu.
    defaultDay = anchor date (drives Today view); null = menu-only.
    votable = appears in the per-person voting tally.
+   Family lean: calm shallow water + easy trails for a 1-yr-old in tow.
    ========================================================================== */
 const ACTIVITIES = [
   {
@@ -64,9 +89,14 @@ const ACTIVITIES = [
     name: "Beavers Bend State Park & Nature Center",
     category: "Outdoors",
     lat: 34.1326751, lng: -94.6803052,
-    blurb: "Swim beach, paddle boats (warm season) and easy flat trails along the Mountain Fork. The all-purpose anchor day.",
-    notes: "Park is 24h; Nature Center 8–5. NO cell service — screenshot maps before you go.",
-    hours: { alwaysOpen: true, label: "Park 24h · Center 8–5", default: { open: "08:00", close: "17:00" } },
+    placeId: "ChIJJ8bXSMVqNYYRxLYyU4Mi0bg",
+    rating: 4.8, ratingCount: 5133,
+    priceTier: null, priceDetail: "Park free to enter",
+    blurb: "The do-everything anchor: swim beach, paddle boats (warm season), picnic spots, and the flat riverside Friends Trail through the woods.",
+    notes: "Park is 24h. The Nature Center BUILDING may keep reduced early-week hours off-season — the park itself doesn't.",
+    pickIf: "Pick this if you want the do-everything day — swim beach, shaded picnic spots, and the flat riverside Friends Trail, all toddler-paced and in one place.",
+    hours: { alwaysOpen: true, label: "Park 24h · Center ≈9–4", default: { open: "09:00", close: "16:00" } },
+    flags: ["flat trails", "swim season"],
     tags: ["swim", "trails", "river", "kids"],
     votable: true, defaultDay: "2026-06-08"
   },
@@ -75,9 +105,14 @@ const ACTIVITIES = [
     name: "Beavers Bend Safari Park",
     category: "Animals",
     lat: 34.1566453, lng: -94.7434015,
-    blurb: "Drive-through 1.8-mi loop — feed exotic animals from your own car.",
-    notes: "Drive your OWN vehicle (Armada is ideal). Per-PERSON pricing + fees; buy tickets & waivers online.",
-    hours: { default: { open: "09:30", close: "17:00" }, label: "9:30–5", callAhead: true },
+    placeId: "ChIJYyuICfpHNYYREpb4Frq8tlM",
+    rating: 4.5, ratingCount: 569,
+    priceTier: "$$", priceDetail: "Per-person + service fee + tax; animal feed extra",
+    blurb: "Drive-through 1.8-mi loop — feed exotic animals from your own car. The priciest single outing.",
+    notes: "Open daily 9:30–5. Drive your OWN vehicle (Armada is ideal).",
+    pickIf: "Pick this if you feel like feeding a kangaroo from the car window without ever unbuckling the baby — the splurge day the big kids will never forget.",
+    hours: { default: { open: "09:30", close: "17:00" }, label: "9:30–5 daily" },
+    flags: ["buy tickets ahead", "drive your own car", "cash for feed"],
     tags: ["animals", "drive-thru", "kids"],
     votable: true, defaultDay: "2026-06-09"
   },
@@ -86,9 +121,14 @@ const ACTIVITIES = [
     name: "The Maze of Hochatown",
     category: "Play",
     lat: 34.1884224, lng: -94.7774421,
-    blurb: "Outdoor wooden maze. Same complex as Chili Dippers — pair them.",
-    notes: "Porta-potties only. No animals, no amusement park (per Aaron).",
+    placeId: "ChIJMc7pMltHNYYRGTStnxmT4Sk",
+    rating: 4.6, ratingCount: 549,
+    priceTier: null, priceDetail: null,
+    blurb: "Outdoor wooden maze with stamp-card towers. Same complex as Chili Dippers — pair them.",
+    notes: "Bigger than it looks — shaded paths, water stations. No animals/amusement (per Aaron).",
+    pickIf: "Pick this if you want to wander an outdoor maze together — Siena rides along in the carrier just fine.",
     hours: { default: { open: "10:00", close: "16:00" }, overrides: { "5": { open: "10:00", close: "18:00" }, "6": { open: "10:00", close: "18:00" } }, label: "10–4 (Fri/Sat to 6)" },
+    flags: ["porta-potties only"],
     tags: ["maze", "outdoor", "kids"],
     votable: true, defaultDay: "2026-06-10"
   },
@@ -97,9 +137,14 @@ const ACTIVITIES = [
     name: "Chili Dippers Golf Club (mini golf)",
     category: "Play",
     lat: 34.1884273, lng: -94.777846,
-    blurb: "18-hole mini golf in the Maze complex.",
-    notes: "No food or drink sold on-site.",
+    placeId: "ChIJ5xaWybZHNYYR0LcWlX7PAEo",
+    rating: 4.3, ratingCount: 87,
+    priceTier: null, priceDetail: "Kid & senior discounts",
+    blurb: "18-hole mini golf in the Maze complex — holes get progressively harder.",
+    notes: "No food or drink sold on-site; bring your own cup.",
+    pickIf: "Pick this if you feel like an easy 18 holes of mini golf right after the maze.",
     hours: { default: { open: "10:00", close: "16:00" }, overrides: { "5": { open: "10:00", close: "18:00" }, "6": { open: "10:00", close: "18:00" } }, label: "10–4 (Fri/Sat to 6)" },
+    flags: ["no food/drink sold"],
     tags: ["mini-golf", "outdoor", "kids"],
     votable: true, defaultDay: "2026-06-10"
   },
@@ -110,9 +155,14 @@ const ACTIVITIES = [
     name: "Beavers Bend Depot — Train & Pony Rides",
     category: "Play",
     lat: 34.1353153, lng: -94.7019977,
-    blurb: "Miniature train trail ride plus pony rides. Big toddler hit.",
+    placeId: "ChIJF2ZC8-c-NYYR33LVAG6_LwI",
+    rating: 4.7, ratingCount: 1049,
+    priceTier: null, priceDetail: null,
+    blurb: "Miniature train trail ride plus pony rides — deer sightings along the route. Big toddler hit.",
     notes: "Closes early. Pony rides warm-season.",
+    pickIf: "Pick this if you want the easiest little-kid win going — a slow train, ponies, and deer along the track.",
     hours: { default: { open: "09:00", close: "15:00" }, overrides: { "6": { open: "09:00", close: "17:00" } }, label: "9–3 (Sat to 5)", callAhead: true },
+    flags: ["call ahead", "closes early"],
     tags: ["train", "ponies", "kids"],
     votable: true, defaultDay: null
   },
@@ -121,9 +171,14 @@ const ACTIVITIES = [
     name: "Forest Heritage Center Museum",
     category: "Indoors",
     lat: 34.1326366, lng: -94.6801289,
-    blurb: "Free, air-conditioned, wood-carving dioramas + a kids' corner. Great heat/rain backup, inside the state park.",
-    notes: "Free admission.",
-    hours: { default: { open: "08:00", close: "17:00" }, label: "8–5" },
+    placeId: "ChIJJ9wH9RI_NYYRQaFVmPwZjQ0",
+    rating: 4.7, ratingCount: 1418,
+    priceTier: null, priceDetail: "Free (donations welcome)",
+    blurb: "Air-conditioned wood-carving dioramas + a kids' corner, inside the state park. Great heat/rain backup.",
+    notes: "Carver often demonstrating on weekends.",
+    pickIf: "Pick this if it's blazing hot or raining and you need somewhere free, indoors, and air-conditioned for an hour.",
+    hours: { default: { open: "08:00", close: "17:00" }, label: "8–5 daily" },
+    flags: ["free", "A/C"],
     tags: ["free", "indoor", "ac", "kids"],
     votable: true, defaultDay: null
   },
@@ -132,9 +187,14 @@ const ACTIVITIES = [
     name: "Beaver's Bend Mining Co",
     category: "Play",
     lat: 34.1520601, lng: -94.7522380,
-    blurb: "Sluice for gems + a dino-themed mini golf. Hands-on for the older two.",
-    notes: "Buy a mining bucket; gems are guaranteed finds.",
-    hours: { default: { open: "09:00", close: "19:00" }, label: "9–7", callAhead: true },
+    placeId: "ChIJVykkSiNHNYYR8El_hFWp1Uk",
+    rating: 4.5, ratingCount: 370,
+    priceTier: null, priceDetail: "Buy a mining bucket; bigger bag = more finds",
+    blurb: "Sluice for gems + a dino-themed mini golf. Hands-on for the older two; gems are guaranteed finds.",
+    notes: "Cute gift shop. (Dino ride was occasionally down late 2025.)",
+    pickIf: "Pick this if you feel like 'digging for treasure' — guaranteed gem finds, plus dino mini golf for the older two.",
+    hours: { default: { open: "09:00", close: "19:00" }, label: "9–7 daily", callAhead: true },
+    flags: ["call ahead", "cash for buckets"],
     tags: ["gems", "mini-golf", "kids"],
     votable: true, defaultDay: null
   },
@@ -143,9 +203,14 @@ const ACTIVITIES = [
     name: "Hochatown Rescue Center & Petting Zoo",
     category: "Animals",
     lat: 34.1514877, lng: -94.7514643,
-    blurb: "Hands-on animals, toddler-paced, cheap. Easy win for Siena & Melania.",
-    notes: "Quick visit; bring small bills.",
-    hours: { default: { open: "10:00", close: "19:00" }, label: "10–7", callAhead: true },
+    placeId: "ChIJz0Fx3DRHNYYRGN_OW52c0fQ",
+    rating: 4.6, ratingCount: 1847,
+    priceTier: "$", priceDetail: "Cheap; supports animal rescue",
+    blurb: "Hands-on animals, toddler-paced, cheap. Easy win for Siena & Melania — easily a two-hour visit.",
+    notes: "Pet and feed most of the animals.",
+    pickIf: "Pick this if you want maximum hands-on animal time for almost no money — calm and toddler-paced.",
+    hours: { default: { open: "10:00", close: "19:00" }, label: "10–7 daily", callAhead: true },
+    flags: ["call ahead", "bring small bills"],
     tags: ["animals", "cheap", "kids"],
     votable: true, defaultDay: null
   },
@@ -154,99 +219,243 @@ const ACTIVITIES = [
     name: "Gutter Chaos (bowling & arcade)",
     category: "Indoors",
     lat: 34.1671184, lng: -94.7609058,
-    blurb: "Bowling + arcade. The designated rainy-day backup.",
-    notes: "CLOSED TUESDAYS.",
+    placeId: "ChIJk0STjJpHNYYRosODqJOh-_Q",
+    rating: 4.5, ratingCount: 622,
+    priceTier: "$$", priceDetail: "Walk-in cheaper than online reservation",
+    blurb: "Bowling, pool, arcade, full kitchen + bar. The designated rainy-day backup.",
+    notes: "High-energy family spot; speak to a server before sitting in the dining area.",
+    pickIf: "Pick this if the weather turns and you need bowling, an arcade, and a full kitchen under one roof (closed Tuesdays).",
     hours: { default: { open: "11:00", close: "22:00" }, overrides: { "2": null, "5": { open: "11:00", close: "23:00" }, "6": { open: "11:00", close: "23:00" } }, label: "11–10 (later Fri/Sat) · closed Tue", callAhead: true },
+    flags: ["rainy-day backup", "walk-in over online"],
     tags: ["bowling", "arcade", "indoor", "rainy-day"],
+    votable: true, defaultDay: null
+  },
+
+  /* ---- NEW: calm, shallow water + easy trail (toddler-friendly) ---- */
+  {
+    id: "lake-beach-area",
+    name: "Broken Bow Lake — Beach Area",
+    category: "Outdoors",
+    lat: 34.1386441, lng: -94.6883223,
+    placeId: "ChIJTbXwdCc_NYYROeMfSL2skL4",
+    rating: 4.6, ratingCount: 284,
+    priceTier: null, priceDetail: "Free",
+    blurb: "A calm lake swim area that's basically a big shallow pool — sandy/grassy edge, no river current, restrooms and showers right there.",
+    notes: "Free life jackets for swimmers. Come before midday on weekends for a shady table. Dog-friendly.",
+    pickIf: "Pick this if you want the easiest water day of the trip — a free, calm swim beach that's basically a big shallow pool, with showers and free life jackets for the little ones.",
+    hours: { alwaysOpen: true, label: "Open 24h · swim in daylight", default: { open: "06:00", close: "21:00" } },
+    flags: ["free", "calm/shallow", "showers + life jackets"],
+    tags: ["swim", "lake", "kids", "free"],
+    votable: true, defaultDay: null
+  },
+  {
+    id: "spillway-wade",
+    name: "Spillway Overlook & River Wade",
+    category: "Outdoors",
+    lat: 34.1571701, lng: -94.7053839,
+    placeId: "ChIJvYO-JMo4NYYRMTQMmzUVAKs",
+    rating: 4.8, ratingCount: 169,
+    priceTier: null, priceDetail: "Free",
+    blurb: "Clear, cold, shin-deep water below the dam with a short path down to the river's edge — the lazy-creek wade spot. Big rocks to perch on, easy splashing.",
+    notes: "Water is cold (dam release) and rocks are slick — water shoes help. Anglers fish nearby; keep the rock-throwing away from them.",
+    pickIf: "Pick this if you feel like a lazy wade in clear, shin-deep water — a short path leads right to the river's edge, perfect for letting Siena splash while the big kids hunt for rocks.",
+    hours: { alwaysOpen: true, label: "Open 24h · daylight best", default: { open: "06:00", close: "20:00" } },
+    flags: ["free", "shallow wading", "water shoes"],
+    tags: ["wade", "river", "kids", "free"],
+    votable: true, defaultDay: null
+  },
+  {
+    id: "beaver-lodge-trail",
+    name: "Beaver Lodge Nature Trail",
+    category: "Outdoors",
+    lat: 34.1451801, lng: -94.6895746,
+    placeId: "ChIJ7fJQBSk_NYYRLhUiUsRc8Ak",
+    rating: 4.8, ratingCount: 128,
+    priceTier: null, priceDetail: "State-park parking pass ~$10",
+    blurb: "A short, gentle nature loop in the trees along the water — birdsong, shade, and easy footing. A real trail without the climb.",
+    notes: "Bring the carrier for Siena; stroller won't love the dirt sections. Parking pass (~$10 as of late 2025).",
+    pickIf: "Pick this if you want a true trail without the work — a short, gentle nature loop along the water (bring the carrier for Siena and ~$10 for parking).",
+    hours: { default: { open: "07:00", close: "20:00" }, label: "Daylight hours" },
+    flags: ["easy trail", "parking pass ~$10", "carrier for Siena"],
+    tags: ["trail", "shade", "river", "kids"],
     votable: true, defaultDay: null
   }
 ];
 
 /* ============================================================================
-   RESTAURANTS — hours best-effort; callAhead flags the ones to verify.
-   spin:true => eligible for the "Can't decide?" dinner spinner.
-   snack:true => quick/casual, kept out of the dinner spinner.
+   RESTAURANTS (12) — hours best-effort (May 2026 snapshot); callAhead = volatile.
+   cuisine = plain-text pill (no color). priceTier from Google price level.
+   All picks here welcome a 1-yr-old. spin:true => dinner-spinner eligible.
    ========================================================================== */
 const RESTAURANTS = [
   {
     id: "abendigos",
     name: "Abendigo's Grill & Patio",
-    type: "Steakhouse",
+    cuisine: "Steakhouse",
     lat: 34.1629066, lng: -94.7574234,
-    notes: "Nicest sit-down dinner. CLOSED Sun & Mon.",
-    hours: { default: { open: "16:00", close: "21:00" }, overrides: { "0": null, "1": null }, label: "4–9 · closed Sun/Mon" },
+    placeId: "ChIJGTfUTtxqNYYRtHIUoJKB73U",
+    rating: 4.5, ratingCount: 3257,
+    priceTier: "$$$", priceDetail: null,
+    notes: "The nicest sit-down dinner in town — big space, outdoor area, live music.",
+    pickIf: "Pick this if you want the nicest sit-down dinner in town — cocktails, a big patio, and live music. Reserve a table; kids are welcome but it's the dress-it-up-a-little night.",
+    hours: { default: { open: "16:00", close: "21:00" }, overrides: { "0": null, "1": null, "5": { open: "16:00", close: "21:30" }, "6": { open: "16:00", close: "21:30" } }, label: "4–9 · closed Sun/Mon" },
+    flags: ["reserve", "cocktails"],
     spin: true
   },
   {
     id: "mountain-fork-brewery",
     name: "Mountain Fork Brewery",
-    type: "Pizza / burgers + beer",
+    cuisine: "Pizza · burgers · beer",
     lat: 34.1828663, lng: -94.7772486,
-    notes: "Kid play area, good value. Family-friendly pick.",
-    hours: { default: { open: "11:00", close: "21:00" }, label: "≈11–9", callAhead: true },
+    placeId: "ChIJlfxJ0-RGNYYRUHffbwbzUgQ",
+    rating: 4.1, ratingCount: 1336,
+    priceTier: "$$", priceDetail: null,
+    notes: "Family-friendly; good value, big kid play area, local beer.",
+    pickIf: "Pick this if you want pizza and a cold beer while the kids burn off energy in the play area.",
+    hours: { default: { open: "11:00", close: "20:30" }, overrides: { "5": { open: "11:00", close: "21:30" }, "6": { open: "11:00", close: "21:30" } }, label: "11–8:30 (Fri/Sat 9:30)", callAhead: true },
+    flags: ["kid play area"],
     spin: true
   },
   {
     id: "grateful-head",
-    name: "Grateful Head Pizza",
-    type: "Pizza",
+    name: "Grateful Head Pizza Oven & Tap Room",
+    cuisine: "Pizza",
     lat: 34.1649127, lng: -94.7603006,
-    notes: "Long waits — call ahead for takeout.",
-    hours: { default: { open: "11:00", close: "21:00" }, label: "≈11–9", callAhead: true },
+    placeId: "ChIJWWFoOjFHNYYRyyjIqLVKbbs",
+    rating: 4.2, ratingCount: 5053,
+    priceTier: "$$", priceDetail: null,
+    notes: "The area's main pizza spot — and it knows it. Great patio.",
+    pickIf: "Pick this if you're craving pizza and willing to call ahead for takeout to skip the famous wait.",
+    hours: { default: { open: "11:00", close: "20:00" }, overrides: { "5": { open: "11:00", close: "21:00" }, "6": { open: "11:00", close: "21:00" } }, label: "11–8 (Fri/Sat 9)", callAhead: true },
+    flags: ["long waits", "takeout recommended"],
     spin: true
   },
   {
     id: "naamans-bbq",
     name: "Naaman's BBQ",
-    type: "BBQ",
+    cuisine: "BBQ",
     lat: 34.1748721, lng: -94.7693318,
-    notes: "Brisket; spacious. Can sell out — go earlier.",
-    hours: { default: { open: "11:00", close: "20:00" }, label: "≈11–8", callAhead: true },
+    placeId: "ChIJ94EEcfZHNYYRLWy0dng_9EU",
+    rating: 4.4, ratingCount: 270,
+    priceTier: "$$", priceDetail: null,
+    notes: "Tender brisket, spacious indoor seating + patio. Order at the counter.",
+    pickIf: "Pick this if you want tender brisket in a roomy, easy spot — go early before it sells out.",
+    hours: { default: { open: "11:00", close: "19:00" }, overrides: { "0": { open: "10:30", close: "19:00" }, "5": { open: "11:00", close: "20:00" }, "6": { open: "11:00", close: "20:00" } }, label: "11–7 (Fri/Sat to 8)", callAhead: true },
+    flags: ["can sell out — go early"],
     spin: true
   },
   {
     id: "buffalo-grill",
     name: "Buffalo Grill",
-    type: "BBQ / Tex-Mex",
+    cuisine: "BBQ · Tex-Mex",
     lat: 34.1115530, lng: -94.7386914,
-    notes: "Kid toys. CLOSED Tue.",
-    hours: { default: { open: "11:00", close: "21:00" }, overrides: { "2": null }, label: "≈11–9 · closed Tue", callAhead: true },
+    placeId: "ChIJA7c3oShBNYYReKQtFLPRb44",
+    rating: 4.3, ratingCount: 1089,
+    priceTier: "$$", priceDetail: null,
+    notes: "Kid toys, strong margaritas, fast service. BBQ + southern comfort.",
+    pickIf: "Pick this if you want BBQ-meets-Tex-Mex, strong margaritas, and a toy bin to keep the kids busy (closed Tuesdays).",
+    hours: { default: { open: "11:00", close: "21:00" }, overrides: { "0": { open: "11:00", close: "17:00" }, "2": null }, label: "11–9 · closed Tue (Sun to 5)", callAhead: true },
+    flags: ["kid toys", "margaritas"],
     spin: true
   },
   {
     id: "lake-bums",
-    name: "Lake Bums Grill",
-    type: "Cheesesteaks / burgers",
+    name: "Lake Bums Grill & Buzz Bar",
+    cuisine: "Cheesesteaks · burgers",
     lat: 34.1656872, lng: -94.7554037,
-    notes: "Eat inside old buses + playground. Closes early.",
-    hours: { default: { open: "11:00", close: "19:00" }, label: "≈11–7", callAhead: true },
+    placeId: "ChIJeQWegpZHNYYRsq6KwLiZXko",
+    rating: 4.6, ratingCount: 236,
+    priceTier: null, priceDetail: null,
+    notes: "Eat inside old buses + playground. Owner Josh runs a great cheesesteak.",
+    pickIf: "Pick this if you feel like the best cheesesteak around, eaten inside a converted bus with a playground right outside — the most kid-friendly spot going.",
+    hours: { default: { open: "11:00", close: "18:00" }, overrides: { "0": { open: "11:00", close: "15:00" }, "1": { open: "11:00", close: "15:00" }, "5": { open: "11:00", close: "20:00" }, "6": { open: "11:00", close: "20:00" } }, label: "11–6 (Fri/Sat to 8) · closes early Sun/Mon", callAhead: true },
+    flags: ["closes early", "playground"],
     spin: true
   },
   {
     id: "hochahut",
     name: "The Hochahut",
-    type: "Corn dogs / snacks",
+    cuisine: "Corn dogs · snacks",
     lat: 34.1524832, lng: -94.7509814,
-    notes: "Cheap, casual, outdoor. Snack stop.",
-    hours: { default: { open: "11:00", close: "20:00" }, label: "≈11–8", callAhead: true },
+    placeId: "ChIJaY9S_5lHNYYROYQy-lja4aw",
+    rating: 4.7, ratingCount: 442,
+    priceTier: "$", priceDetail: null,
+    notes: "Famous corn dogs (ranked top-10 in the US), hammocks, outdoor seating. Snack stop, not dinner.",
+    pickIf: "Pick this if you just want a famous corn dog and a hammock — a snack stop, not a real dinner.",
+    hours: { default: { open: "11:00", close: "18:00" }, overrides: { "5": { open: "11:00", close: "20:00" }, "6": { open: "11:00", close: "20:00" } }, label: "11–6 (Fri/Sat to 8)", callAhead: true },
+    flags: ["snack stop", "porta-potty"],
     snack: true, spin: false
   },
   {
     id: "hochatown-saloon",
     name: "Hochatown Saloon",
-    type: "Bar & grill",
+    cuisine: "Bar & grill",
     lat: 34.1502230, lng: -94.7495740,
-    notes: "Live music, busy. Adult-leaning vibe.",
-    hours: { default: { open: "11:00", close: "23:00" }, label: "≈11–11", callAhead: true },
+    placeId: "ChIJeRfJ_C1BNYYRvN6gO7VzvLc",
+    rating: 4.0, ratingCount: 2615,
+    priceTier: "$$", priceDetail: null,
+    notes: "Big portions, live music on weekends (can close early for concerts). Adult-leaning vibe.",
+    pickIf: "Pick this if you want big plates and a lively crowd — come earlier with the kids before the weekend music takes over.",
+    hours: { default: { open: "11:00", close: "21:00" }, overrides: { "0": { open: "08:00", close: "21:00" }, "6": { open: "08:00", close: "21:00" } }, label: "≈11–9 (wknd from 8am)", callAhead: true },
+    flags: ["live music", "busy"],
     spin: true
   },
   {
     id: "shuck-me",
-    name: "Shuck Me",
-    type: "Seafood / Cajun",
+    name: "Shuck Me Kitchen & Cantina",
+    cuisine: "Seafood · Cajun",
     lat: 34.1830356, lng: -94.7766387,
-    notes: "Mixed reviews — set expectations.",
-    hours: { default: { open: "11:00", close: "21:00" }, label: "≈11–9", callAhead: true },
+    placeId: "ChIJS6V5hdlHNYYRD_0eE0KaMOs",
+    rating: 4.1, ratingCount: 1258,
+    priceTier: "$$", priceDetail: null,
+    notes: "Mixed reviews on flavor; prices run high. Set expectations.",
+    pickIf: "Pick this if you're set on seafood and Cajun and going in with open-minded expectations.",
+    hours: { default: { open: "11:00", close: "21:00" }, overrides: { "5": { open: "11:00", close: "22:00" }, "6": { open: "11:00", close: "22:00" } }, label: "11–9 (Fri/Sat to 10)", callAhead: true },
+    flags: ["mixed reviews"],
+    spin: true
+  },
+
+  /* ---- NEW: atmosphere + drinks, all welcome a 1-yr-old ---- */
+  {
+    id: "beavers-bend-brewery",
+    name: "Beavers Bend Brewery",
+    cuisine: "Brewery · beer garden",
+    lat: 34.1656913, lng: -94.7596645,
+    placeId: "ChIJDf7MuSRHNYYRUS6Vc8o7xNA",
+    rating: 4.6, ratingCount: 394,
+    priceTier: null, priceDetail: null,
+    notes: "Beer garden with live music, cornhole, board games and a family-friendly patio. Food is limited (gourmet hot-dog cart) — come for the vibe + a brew.",
+    pickIf: "Pick this if you want the best easygoing atmosphere of the trip — a beer garden with live music, cornhole, and board games where kids and dogs are part of the deal.",
+    hours: { default: { open: "12:00", close: "20:00" }, overrides: { "0": { open: "11:00", close: "19:00" }, "5": { open: "12:00", close: "21:00" }, "6": { open: "12:00", close: "21:00" } }, label: "12–8 (Fri/Sat 9 · Sun 11–7)", callAhead: true },
+    flags: ["live music", "family + dog friendly", "light food only"],
+    spin: true
+  },
+  {
+    id: "papa-poblanos",
+    name: "Papa Poblanos",
+    cuisine: "Mexican · Tex-Mex",
+    lat: 34.029736, lng: -94.739289,
+    placeId: "ChIJEVuER8VqNYYR3wCiPeAkEYw",
+    rating: 4.2, ratingCount: 1684,
+    priceTier: "$$", priceDetail: null,
+    notes: "Relaxed Tex-Mex with a full bar and pet-friendly patio. Down in Broken Bow proper (~12 min); reviewers note they don't rush you, even late.",
+    pickIf: "Pick this if you want a relaxed, kid-friendly Tex-Mex dinner with a real margarita and a patio — nobody rushes you, even with a baby in tow.",
+    hours: { default: { open: "11:00", close: "21:00" }, overrides: { "5": { open: "11:00", close: "22:00" }, "6": { open: "11:00", close: "22:00" } }, label: "11–9 (Fri/Sat to 10)" },
+    flags: ["margaritas", "patio", "kid-friendly"],
+    spin: true
+  },
+  {
+    id: "pressa-italia",
+    name: "Pressa Italia",
+    cuisine: "Italian",
+    lat: 34.1137086, lng: -94.7406714,
+    placeId: "ChIJ34aeYABBNYYRH_FQnHVL8RI",
+    rating: 4.2, ratingCount: 410,
+    priceTier: null, priceDetail: null,
+    notes: "Chic Italian with a wine list and house limoncello — the closest thing to a date-night room that still welcomes kids. Pasta and pizza are the standouts.",
+    pickIf: "Pick this if you want the closest thing to a date-night vibe that still welcomes the kids — chic Italian, a proper wine list, and a great room.",
+    hours: { default: { open: "11:00", close: "21:00" }, overrides: { "5": { open: "11:00", close: "22:00" }, "6": { open: "11:00", close: "22:00" } }, label: "11–9 (Fri/Sat to 10)", callAhead: true },
+    flags: ["chic atmosphere", "wine list", "kid-friendly"],
     spin: true
   }
 ];
@@ -260,29 +469,41 @@ const PROVISIONS = [
     name: "Pruett's Food (Broken Bow)",
     type: "Full grocery",
     lat: 34.0250000, lng: -94.7380556,
-    notes: "STOCK UP HERE ON THE WAY IN — it's on the route, ~5 min from the cabin.",
-    hours: { default: { open: "07:00", close: "22:00" }, label: "7am–10pm daily" }
+    placeId: "ChIJAAAAANRqNYYRWSN2Chlm8rc",
+    rating: 4.4, ratingCount: 2171,
+    priceTier: "$", priceDetail: null,
+    notes: "Clean, well-stocked, friendly. Bakery + hot deli. ~5 min from the cabin.",
+    hours: { default: { open: "07:00", close: "22:00" }, label: "7am–10pm daily" },
+    flags: ["stock up on the way in"]
   },
   {
     id: "local-259",
     name: "The Market at Local 259 (Hochatown)",
     type: "Gourmet / last-minute",
     lat: 34.1900973, lng: -94.7787097,
-    notes: "Pricier; coffee bar. Good for forgotten items.",
-    hours: { default: { open: "08:00", close: "20:00" }, label: "≈8–8", callAhead: true }
+    placeId: "ChIJUxVbSx9HNYYRugGJeuHESIo",
+    rating: 4.3, ratingCount: 233,
+    priceTier: "$$", priceDetail: null,
+    notes: "Hand-cut steaks, ready-to-eat meals, coffee bar, cabin basics. Pricier — for forgotten items.",
+    hours: { default: { open: "08:00", close: "19:00" }, overrides: { "4": { open: "08:00", close: "20:00" }, "5": { open: "08:00", close: "21:00" }, "6": { open: "08:00", close: "21:00" } }, label: "≈8–7 (later Thu–Sat)", callAhead: true },
+    flags: ["last-minute · pricey"]
   },
   {
     id: "mountain-man-meat",
     name: "Mountain Man Meat Market",
     type: "Steaks / sausage",
     lat: 34.0931725, lng: -94.7398408,
-    notes: "Cabin grill-out supply. In-cabin chef option (Chef Phil).",
-    hours: { default: { open: "09:00", close: "18:00" }, label: "≈9–6", callAhead: true }
+    placeId: "ChIJ4Q1VvW9ANYYRfipptFI8oLE",
+    rating: 4.7, ratingCount: 277,
+    priceTier: "$$", priceDetail: null,
+    notes: "High-end grill supply: steaks, sausage, sides, wine. In-cabin chef option (Chef Phil).",
+    hours: { default: { open: "11:00", close: "18:00" }, overrides: { "5": { open: "11:00", close: "20:00" }, "6": { open: "10:00", close: "20:00" } }, label: "11–6 (later Fri/Sat)", callAhead: true },
+    flags: ["opens 11am", "in-cabin chef option"]
   }
 ];
 
 /* ============================================================================
-   LEG 1 — drive up (Sun June 7)
+   LEG 1 — drive up (Sun June 7). Stops are TRAVEL-DAY items → DIRECTIONS.
    ========================================================================== */
 const DRIVE_UP = {
   date: "2026-06-07",
@@ -293,7 +514,7 @@ const DRIVE_UP = {
   stops: [
     { name: "Morning coffee & stretch", when: "~9:30 AM", note: "First break out of the gate." },
     { name: "Lunch — Shreveport area", when: "~12:00 PM", note: "Time-midpoint; let the kids run." },
-    { name: "Pruett's Food — final grocery", when: "~2:45 PM", note: "Stock the cabin on the way in (open 7am–10pm).", lat: 34.0250000, lng: -94.7380556 }
+    { name: "Pruett's Food — final grocery", when: "~2:45 PM", note: "Stock the cabin on the way in (open 7am–10pm).", lat: 34.0250000, lng: -94.7380556, placeId: "ChIJAAAAANRqNYYRWSN2Chlm8rc", travelDay: true }
   ],
   arrive: "~3:00 PM",
   checkIn: "4:00 PM"
@@ -312,40 +533,61 @@ const STAY_DAYS = [
 ];
 
 /* ============================================================================
-   LEG 3 — scenic way home (June 11–13). Coords verified via Google Places.
+   LEG 3 — scenic way home (June 11–13). Coords + Place IDs verified.
+   These are TRAVEL-DAY items → DIRECTIONS.
    ========================================================================== */
 const LEG3_STOPS = [
   {
     id: "crater-of-diamonds",
     name: "Crater of Diamonds State Park",
     lat: 34.0324674, lng: -93.6751298,
+    placeId: "ChIJq5AkbjhhM4YR3pUpqKmSMSc",
+    rating: 4.5, ratingCount: 8065,
+    priceTier: "$$", priceDetail: "$15 adult · $7 kids 6–12 · under 6 free; tool rental ~$10–20",
     blurb: "Dig the only public diamond field in the world — keep what you find.",
-    notes: "Open 8–5 daily. ~$15/person. Hot & shadeless — bring umbrella, cooler, water. Rent or bring sifters.",
-    region: "Murfreesboro, AR"
+    notes: "Open 8–4 daily. Hot & shadeless — bring umbrella, cooler, water. Rent or bring sifters.",
+    hours: { default: { open: "08:00", close: "16:00" }, label: "8–4 daily" },
+    flags: ["cash for fees", "bring shade & water"],
+    region: "Murfreesboro, AR", travelDay: true
   },
   {
     id: "hot-springs",
     name: "Hot Springs National Park — Bathhouse Row",
     lat: 34.5137118, lng: -93.0534724,
+    placeId: "ChIJJ8pAuQArzYcRGyB_jA0P_Vc",
+    rating: 4.7, ratingCount: 2177,
+    priceTier: null, priceDetail: "Free; ranger tours free",
     blurb: "Historic Fordyce Bathhouse + Bathhouse Row promenade. Free ranger tours.",
     notes: "Visitor center 9–5 daily, free. Overnight here (6/11).",
-    region: "Hot Springs, AR"
+    hours: { default: { open: "09:00", close: "17:00" }, label: "VC 9–5 daily" },
+    flags: ["free"],
+    region: "Hot Springs, AR", travelDay: true
   },
   {
     id: "natchitoches",
     name: "Natchitoches Historic District (Front St)",
     lat: 31.7607, lng: -93.0866,
+    placeId: null,   // Google's "Historic District" pin is the WRONG spot (LA-494, S of town). Use a name search → downtown Front St.
+    rating: null, ratingCount: null,
+    priceTier: null, priceDetail: "Free to stroll",
     blurb: "Brick-paved Front Street along the Cane River. Famous meat pies. Overnight here (6/12).",
-    notes: "Oldest town in the Louisiana Purchase. Pin targets downtown Front St (not the plantation units S of town).",
-    region: "Natchitoches, LA"
+    notes: "Oldest town in the Louisiana Purchase. Coords target downtown Front St (not the plantation units S of town).",
+    hours: null,
+    flags: ["meat pies", "evening stroll"],
+    region: "Natchitoches, LA", travelDay: true
   },
   {
     id: "fort-rosalie",
     name: "Fort Rosalie (Natchez NHP)",
     lat: 31.55691, lng: -91.4101249,
-    blurb: "NPS green space + Mississippi River overlook. The personal-history beat — see FORT_ROSALIE.",
-    notes: "Dawn–dusk, free. ~20–30 min picnic stop. ~2 hr home from here.",
-    region: "Natchez, MS"
+    placeId: "ChIJ2_vJQ-f3JYYRCqjQlEzRknA",
+    rating: 4.6, ratingCount: 23,
+    priceTier: null, priceDetail: "Free",
+    blurb: "NPS green space + Mississippi River overlook. The personal-history beat — see the sidebar.",
+    notes: "Dawn–dusk, free. ~20–30 min picnic stop. ~2 hr home from here. (It's an open green space — set expectations.)",
+    hours: null,
+    flags: ["picnic stop", "park on Green St"],
+    region: "Natchez, MS", travelDay: true
   }
 ];
 
@@ -361,6 +603,8 @@ const SCENIC_HOME = [
 const FORT_ROSALIE = {
   title: "Fort Rosalie & the Mayeux line",
   lat: 31.55691, lng: -91.4101249,
+  placeId: "ChIJ2_vJQ-f3JYYRCqjQlEzRknA",
+  travelDay: true,
   hours: "Dawn–dusk · free",
   body: "Aaron descends from Pierre Mayeux. Fort Rosalie, in Natchez, MS, was founded August 3, 1716 by Bienville and was the site of the 1729 Natchez Massacre. It's the trip's one personal-history beat — a green NPS overlook above the Mississippi, worth a short picnic stop on the way home.",
   footnote: "The New France / Louisiana book is Aaron's dad's project; Aaron did research for it."
