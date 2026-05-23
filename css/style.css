@@ -345,3 +345,63 @@ footer { text-align: center; padding: 30px 0 50px; color: var(--muted); font-siz
   .cd-cell { min-width: 56px; }
   .section-title h2 { font-size: 22px; }
 }
+
+/* ============================================================================
+   CABIN KITCHEN (Cluster B) — meal cards + consolidated grocery list.
+   Reuses .card / .check / .check-group / .progress from the existing styles.
+   ========================================================================== */
+.kitchen-intro { color: var(--muted); max-width: 680px; margin-bottom: 16px; line-height: 1.55; }
+.card.meal .meal-steps { margin: 8px 0 4px 18px; padding: 0; color: var(--text); }
+.card.meal .meal-steps li { margin-bottom: 4px; line-height: 1.45; }
+.card.meal .meal-ings { font-size: 13.5px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+.card.meal .meal-ings strong { color: var(--text); }
+.meal-toggle {
+  display: flex; align-items: center; gap: 8px; margin-top: 12px;
+  padding-top: 10px; border-top: 1px dashed var(--line);
+  font-family: "Bitter", serif; font-weight: 700; font-size: 13.5px; color: var(--brand); cursor: pointer;
+}
+.meal-toggle input { width: 18px; height: 18px; accent-color: var(--brand); }
+.card.meal.skipped { opacity: .5; }
+.card.meal.skipped .meal-toggle { color: var(--muted); }
+
+.grocery { margin-top: 22px; padding-top: 18px; border-top: 2px solid var(--line); }
+.grocery-head { font-family: "Bitter", serif; color: var(--accent); font-size: 19px; margin-bottom: 4px; }
+.g-qty { color: var(--muted); font-size: 13px; }
+.g-store {
+  display: inline-block; font-size: 11px; font-weight: 700; color: var(--accent-2);
+  border: 1px solid var(--accent-2); border-radius: 4px; padding: 0 5px; margin-left: 4px;
+}
+
+/* print button sits next to the campfire toggle; it inherits .theme-toggle styling */
+#printBtn { margin-right: 8px; }
+
+/* ============================================================================
+   PRINT / SAVE-TO-PDF (#28) — show ONLY the plan sheet, hide the live app.
+   ========================================================================== */
+#print-sheet { display: none; }
+
+@media print {
+  /* hide the whole interactive app + chrome */
+  .nav, .hero, #banner, #confetti, footer,
+  section[id^="sec-"] { display: none !important; }
+
+  /* show the generated plan sheet */
+  #print-sheet { display: block !important; color: #000; font-family: "Spectral", Georgia, serif; padding: 0; }
+  #print-sheet h1 { font-family: "Bitter", serif; font-size: 24px; margin: 0 0 4px; }
+  #print-sheet h2 {
+    font-family: "Bitter", serif; font-size: 16px; margin: 18px 0 6px;
+    border-bottom: 1.5px solid #000; padding-bottom: 2px;
+  }
+  #print-sheet .p-sub { font-size: 12px; margin: 2px 0; color: #333; }
+  #print-sheet .p-note { font-size: 11px; color: #444; }
+  #print-sheet .p-list { margin: 4px 0 4px 18px; padding: 0; }
+  #print-sheet .p-list li { margin-bottom: 3px; }
+  #print-sheet .p-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  #print-sheet .p-table td { border: 1px solid #999; padding: 4px 6px; vertical-align: top; }
+  #print-sheet .p-table td:first-child { white-space: nowrap; font-weight: 700; width: 70px; }
+  #print-sheet .p-grocery, #print-sheet .p-gcat { font-size: 12px; line-height: 1.5; margin: 3px 0; }
+  #print-sheet .p-foot { margin-top: 18px; font-size: 10px; color: #555; border-top: 1px solid #999; padding-top: 6px; }
+  #print-sheet h2 { page-break-after: avoid; }
+  #print-sheet .p-table, #print-sheet .p-list { page-break-inside: avoid; }
+  @page { margin: 0.6in; }
+}
