@@ -4,157 +4,148 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#2f4a3c" />
+  <meta name="description" content="The Mayeux family field guide to Broken Bow, OK — June 2026." />
   <title>Broken Bow 2026 — Mayeux Field Guide</title>
 
-  <!-- Fonts (load from the web; the offline version comes later) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;700;900&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;600;700;900&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
 
-  <style>
-    :root {
-      --green:   #2f4a3c;   /* forest */
-      --green-2: #3c5e4c;
-      --cream:   #f3ead6;   /* kraft paper */
-      --cream-2: #e7d9bd;
-      --rust:    #c4622d;   /* accent */
-      --ink:     #2a2218;
-    }
+  <link rel="stylesheet" href="css/style.css" />
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 24px;
-      font-family: "Spectral", Georgia, serif;
-      color: var(--ink);
-      background-color: var(--cream);
-      /* subtle paper grain */
-      background-image:
-        radial-gradient(circle at 20% 15%, rgba(0,0,0,.04) 0, transparent 40%),
-        radial-gradient(circle at 80% 80%, rgba(0,0,0,.05) 0, transparent 45%),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E");
-    }
-
-    .card {
-      width: min(560px, 100%);
-      text-align: center;
-      padding: 48px 36px 40px;
-      background: var(--cream);
-      border: 3px solid var(--green);
-      border-radius: 14px;
-      box-shadow: 0 18px 50px rgba(42,34,24,.22), inset 0 0 0 6px var(--cream);
-      position: relative;
-      animation: rise .7s ease both;
-    }
-
-    /* the park-patch badge */
-    .badge {
-      width: 132px; height: 132px;
-      margin: 0 auto 22px;
-      border-radius: 50%;
-      background: var(--green);
-      display: grid; place-items: center;
-      box-shadow: 0 0 0 5px var(--cream), 0 0 0 8px var(--green), 0 10px 24px rgba(0,0,0,.25);
-      animation: rise .7s .05s ease both;
-    }
-    .badge svg { width: 96px; height: 96px; }
-
-    .eyebrow {
-      font-family: "Bitter", serif;
-      font-weight: 700;
-      letter-spacing: .28em;
-      text-transform: uppercase;
-      font-size: 12px;
-      color: var(--rust);
-      animation: rise .7s .12s ease both;
-    }
-
-    h1 {
-      font-family: "Bitter", serif;
-      font-weight: 900;
-      font-size: clamp(34px, 8vw, 52px);
-      line-height: 1;
-      color: var(--green);
-      margin: 8px 0 6px;
-      animation: rise .7s .18s ease both;
-    }
-
-    .dates {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--ink);
-      animation: rise .7s .24s ease both;
-    }
-
-    .rule {
-      width: 64px; height: 3px; margin: 18px auto;
-      background: var(--rust); border-radius: 3px;
-      animation: rise .7s .3s ease both;
-    }
-
-    .count {
-      font-family: "Bitter", serif;
-      animation: rise .7s .34s ease both;
-    }
-    .count strong { font-size: 30px; color: var(--rust); }
-
-    .note {
-      margin-top: 14px;
-      font-style: italic;
-      color: var(--green-2);
-      animation: rise .7s .4s ease both;
-    }
-
-    .roster {
-      margin-top: 22px;
-      font-size: 14px;
-      letter-spacing: .04em;
-      color: var(--ink);
-      animation: rise .7s .46s ease both;
-    }
-
-    @keyframes rise {
-      from { opacity: 0; transform: translateY(14px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
-  </style>
+  <!-- set theme + enable JS-only styles before first paint (no flash) -->
+  <script>
+    (function () {
+      var e = document.documentElement; e.className += " js";
+      var t; try { t = localStorage.getItem("bb_theme"); } catch (_) {}
+      if (!t) { var h = new Date().getHours(); t = (h >= 19 || h < 7) ? "night" : "day"; }
+      e.setAttribute("data-theme", t);
+    })();
+  </script>
 </head>
 
 <body>
-  <main class="card">
-    <div class="badge" aria-hidden="true">
-      <!-- simple pines + mountains, hand-drawn feel -->
-      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="none">
-        <circle cx="50" cy="50" r="46" stroke="#f3ead6" stroke-width="2" opacity=".5"/>
-        <path d="M14 70 L34 38 L54 70 Z" fill="#f3ead6"/>
-        <path d="M44 72 L66 30 L88 72 Z" fill="#f3ead6"/>
-        <rect x="46" y="68" width="6" height="12" fill="#c4622d"/>
-        <path d="M10 76 H90" stroke="#c4622d" stroke-width="3" stroke-linecap="round"/>
-      </svg>
+  <!-- ===== top nav ===== -->
+  <header class="nav">
+    <div class="nav-inner">
+      <nav class="nav-links">
+        <a href="#top">Top</a>
+        <a href="#sec-today">Today</a>
+        <a href="#sec-weather">Weather</a>
+        <a href="#sec-drive">Drive Up</a>
+        <a href="#sec-stay">The Stay</a>
+        <a href="#sec-activities">Activities</a>
+        <a href="#sec-eat">Eat</a>
+        <a href="#sec-shop">Provisions</a>
+        <a href="#sec-home">Way Home</a>
+        <a href="#sec-pack">Packing</a>
+        <a href="#sec-hunt">Hunt</a>
+      </nav>
+      <button class="theme-toggle" id="themeToggle" type="button">Campfire</button>
     </div>
+  </header>
 
-    <p class="eyebrow">Mayeux Family Field Guide</p>
-    <h1>Broken Bow</h1>
-    <p class="dates">June 7 – 11, 2026 &middot; Hochatown, Oklahoma</p>
+  <!-- ===== hero / dashboard ===== -->
+  <div class="wrap" id="top">
+    <section class="hero" style="border-top:none">
+      <div class="hero-badge" id="heroBadge" title="Tap me" aria-label="Broken Bow badge">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="none">
+          <circle cx="50" cy="50" r="46" stroke="#f3ead6" stroke-width="2" opacity=".5" />
+          <path d="M14 70 L34 38 L54 70 Z" fill="#f3ead6" />
+          <path d="M44 72 L66 30 L88 72 Z" fill="#f3ead6" />
+          <rect x="46" y="68" width="6" height="12" fill="#c4622d" />
+          <path d="M10 76 H90" stroke="#c4622d" stroke-width="3" stroke-linecap="round" />
+        </svg>
+      </div>
+      <p class="eyebrow">Mayeux Family Field Guide</p>
+      <h1>Broken Bow</h1>
+      <p class="tagline" id="tagline">June 7&ndash;11 &middot; Hochatown, Oklahoma</p>
 
-    <div class="rule"></div>
+      <div class="countdown" id="countdown">
+        <div class="cd-cell"><div class="cd-num" id="cd-d">&mdash;</div><div class="cd-lab">days</div></div>
+        <div class="cd-cell"><div class="cd-num" id="cd-h">&mdash;</div><div class="cd-lab">hours</div></div>
+        <div class="cd-cell"><div class="cd-num" id="cd-m">&mdash;</div><div class="cd-lab">mins</div></div>
+        <div class="cd-cell"><div class="cd-num" id="cd-s">&mdash;</div><div class="cd-lab">secs</div></div>
+      </div>
+      <p class="cd-caption" id="cd-caption">until we hit the road</p>
 
-    <p class="count"><strong id="days">—</strong> days to go</p>
-    <p class="note">The field guide is being assembled. Check back soon.</p>
+      <p class="roster" id="roster">Aaron &middot; Lucia &middot; Zelphia &middot; Melania &middot; Siena</p>
+    </section>
+  </div>
 
-    <p class="roster">Aaron &middot; Lucia &middot; Zelphia &middot; Melania &middot; Siena</p>
-  </main>
+  <!-- ===== sections (filled by app.js) ===== -->
+  <section id="sec-today"><div class="wrap reveal">
+    <div class="section-title"><span class="num">1</span><h2>Today</h2></div>
+    <div id="today"></div>
+  </div></section>
 
-  <script>
-    // tiny live touch: days until departure (June 7, 2026)
-    var trip = new Date("2026-06-07T08:00:00-05:00");
-    var now = new Date();
-    var days = Math.max(0, Math.ceil((trip - now) / 86400000));
-    document.getElementById("days").textContent = days;
-  </script>
+  <section id="sec-weather"><div class="wrap reveal">
+    <div class="section-title"><span class="num">2</span><h2>Hochatown Weather</h2></div>
+    <div id="weather"><p class="muted">Loading current conditions&hellip;</p></div>
+  </div></section>
+
+  <section id="sec-drive"><div class="wrap reveal">
+    <div class="section-title"><span class="num">3</span><h2>The Drive Up</h2></div>
+    <div id="drive"></div>
+  </div></section>
+
+  <section id="sec-stay"><div class="wrap reveal">
+    <div class="section-title"><span class="num">4</span><h2>The Stay</h2></div>
+    <p class="lead">One easy anchor outing a day, then home for the pool, hot tub, firepit and grill.</p>
+    <div id="stay" class="grid"></div>
+  </div></section>
+
+  <section id="sec-activities"><div class="wrap reveal">
+    <div class="section-title"><span class="num">5</span><h2>Activities &amp; Voting</h2></div>
+    <p class="lead">Tap a family member's circle to cast their vote. Votes save on this device.</p>
+    <div id="activities" class="grid"></div>
+  </div></section>
+
+  <section id="sec-eat"><div class="wrap reveal">
+    <div class="section-title"><span class="num">6</span><h2>Where to Eat</h2></div>
+    <p class="lead">"Open now" is best-effort &mdash; call ahead on the dashed ones.</p>
+    <div id="eat" class="grid"></div>
+  </div></section>
+
+  <section id="sec-shop"><div class="wrap reveal">
+    <div class="section-title"><span class="num">7</span><h2>Provisions</h2></div>
+    <p class="lead">Stock the cabin at Pruett's on the way in &mdash; it's right on the route.</p>
+    <div id="shop" class="grid"></div>
+  </div></section>
+
+  <section id="sec-home"><div class="wrap reveal">
+    <div class="section-title"><span class="num">8</span><h2>The Scenic Way Home</h2></div>
+    <p class="lead">Two nights, three states, and one stop that's just for us.</p>
+    <div id="home"></div>
+  </div></section>
+
+  <section id="sec-pack"><div class="wrap reveal">
+    <div class="section-title"><span class="num">9</span><h2>Packing</h2></div>
+    <div id="packing"></div>
+  </div></section>
+
+  <section id="sec-hunt"><div class="wrap reveal">
+    <div class="section-title"><span class="num">10</span><h2>Kids' Scavenger Hunt</h2></div>
+    <div id="scavenger"></div>
+  </div></section>
+
+  <section id="sec-fun"><div class="wrap reveal spinner-box">
+    <div class="section-title"><span class="num">11</span><h2>Can't Decide on Dinner?</h2></div>
+    <button class="spin-btn" id="spinBtn" type="button">Spin the wheel</button>
+    <div class="spin-result" id="spinResult"></div>
+  </div></section>
+
+  <footer>
+    <div class="wrap">
+      <p>Broken Bow 2026 &middot; Built for Lucia, Zelphia, Melania &amp; Siena.</p>
+      <p style="margin-top:4px">No cell service at the cabin &mdash; screenshot your maps. &copy; <span id="year">2026</span></p>
+    </div>
+  </footer>
+
+  <canvas id="confetti" aria-hidden="true"></canvas>
+
+  <!-- data first, then logic -->
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
