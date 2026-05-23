@@ -405,3 +405,17 @@ footer { text-align: center; padding: 30px 0 50px; color: var(--muted); font-siz
   #print-sheet .p-table, #print-sheet .p-list { page-break-inside: avoid; }
   @page { margin: 0.6in; }
 }
+
+/* ── Cluster D / #30 — vote-driven plan ─────────────────────────────────── */
+.plan-note {
+  font-size: .82rem; line-height: 1.4; color: var(--muted);
+  background: var(--surface); border: 1px solid var(--line);
+  border-left: 3px solid var(--accent); border-radius: 6px;
+  padding: 9px 12px; margin: 0 0 16px;
+}
+.plan-eats { margin-top: 8px; font-size: .9rem; color: var(--text); }
+.plan-eats strong { font-weight: 600; color: var(--brand); }
+.vote-pick {
+  font-size: .7rem; font-weight: 700; color: var(--accent);
+  letter-spacing: .02em; white-space: nowrap;
+}
