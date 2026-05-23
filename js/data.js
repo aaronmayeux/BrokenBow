@@ -634,7 +634,123 @@ const SCAVENGER_HUNT = [
 const PACKING = [
   { group: "Pool & water", items: ["Swimsuits (x5)", "Towels", "Goggles", "Toddler floaties — Siena", "Sunscreen", "Water shoes"] },
   { group: "Outdoors", items: ["Bug spray", "Hats", "Hiking/closed-toe shoes", "Refillable water bottles", "Stroller / carrier", "Umbrella (Crater of Diamonds!)"] },
-  { group: "Cabin & grill", items: ["Charcoal + lighter", "Coffee + filters", "Trash bags", "Dish soap", "Cooler"] },
+  { group: "Cabin & grill", items: ["Charcoal + lighter", "Coffee + filters", "Trash bags", "Dish soap", "Ice chest / cooler"] },
   { group: "Kids", items: ["Diapers / wipes — Siena", "Snacks", "Tablets + chargers", "Favorite stuffies", "Night light"] },
   { group: "Don't forget", items: ["Phone chargers", "SCREENSHOT maps — no cell service!", "Crater of Diamonds tools", "Cash for fees", "First-aid kit"] }
 ];
+
+/* ============================================================================
+   CABIN KITCHEN (Cluster B) — 2 dinners + 2 breakfasts, all OPTIONAL.
+   Toggle a meal off and its ingredients drop out of the consolidated grocery
+   list below. Everything is grill-leaning + kid-friendly.
+
+   Each ingredient: { item, qty, cat, store? }
+     cat   = grocery aisle for grouping ("Meat", "Produce", "Dairy & eggs",
+             "Bread & bakery", "Pantry"). Shared items across meals merge in
+             the rollup (qtys combined).
+     store = override default store. Default is Pruett's (the stock-up run).
+   ========================================================================== */
+const CABIN_KITCHEN = {
+  intro: "Four easy, grill-leaning meals — all optional. Toggle off anything you won't cook and its ingredients drop off the grocery list. Everything but the ribeyes comes from Pruett's on the way in; grab the steaks at Mountain Man Meat Market.",
+  defaultStore: "Pruett's Food",
+  meals: [
+    {
+      id: "dinner-ribeyes",
+      slot: "Dinner",
+      name: "Grilled Ribeyes",
+      grill: true,
+      serves: "Family of 5 (small kid plates)",
+      blurb: "The splurge dinner. Steaks from Mountain Man Meat Market, foil potatoes and corn straight on the firepit grill.",
+      steps: [
+        "Pull steaks out 30–40 min before cooking; salt both sides.",
+        "Grill ribeyes hot ~4–5 min/side for medium; rest 5 min under foil with a pat of butter.",
+        "Wrap potatoes in foil with butter + salt; grill ~40 min, turning. Corn in husk ~15 min.",
+        "Toss a quick bagged salad while the steaks rest."
+      ],
+      ingredients: [
+        { item: "Ribeye steaks", qty: "4 large", cat: "Meat", store: "Mountain Man Meat Market" },
+        { item: "Butter", qty: "1 stick", cat: "Dairy & eggs" },
+        { item: "Russet potatoes", qty: "6", cat: "Produce" },
+        { item: "Corn on the cob", qty: "5 ears", cat: "Produce" },
+        { item: "Bagged salad kit", qty: "1", cat: "Produce" },
+        { item: "Salt & pepper", qty: "to taste", cat: "Pantry" },
+        { item: "Garlic powder", qty: "1 jar", cat: "Pantry" },
+        { item: "Aluminum foil", qty: "1 roll", cat: "Pantry" }
+      ]
+    },
+    {
+      id: "dinner-burgers",
+      slot: "Dinner",
+      name: "Burgers + Dogs",
+      grill: true,
+      serves: "Family of 5",
+      blurb: "Easy crowd-pleaser. Burgers for the grown-ups and big kids, hot dogs for the littles — all off the grill.",
+      steps: [
+        "Form patties (or use pre-made); season with salt, pepper, garlic powder.",
+        "Grill burgers ~4 min/side; add cheese in the last minute. Grill dogs ~6–8 min, turning.",
+        "Toast buns on the grill edge for a minute.",
+        "Set out lettuce, tomato, onion, pickles + condiments. Chips on the side."
+      ],
+      ingredients: [
+        { item: "Ground beef (or patties)", qty: "2 lb", cat: "Meat", store: "Mountain Man Meat Market" },
+        { item: "Hot dogs", qty: "1 pack", cat: "Meat" },
+        { item: "Hamburger buns", qty: "1 pack", cat: "Bread & bakery" },
+        { item: "Hot dog buns", qty: "1 pack", cat: "Bread & bakery" },
+        { item: "American cheese slices", qty: "1 pack", cat: "Dairy & eggs" },
+        { item: "Lettuce", qty: "1 head", cat: "Produce" },
+        { item: "Tomato", qty: "2", cat: "Produce" },
+        { item: "Onion", qty: "1", cat: "Produce" },
+        { item: "Pickles", qty: "1 jar", cat: "Pantry" },
+        { item: "Ketchup / mustard / mayo", qty: "1 ea", cat: "Pantry" },
+        { item: "Chips", qty: "2 bags", cat: "Pantry" },
+        { item: "Salt & pepper", qty: "to taste", cat: "Pantry" },
+        { item: "Garlic powder", qty: "1 jar", cat: "Pantry" }
+      ]
+    },
+    {
+      id: "breakfast-biscuits",
+      slot: "Breakfast",
+      name: "Biscuits & Gravy",
+      grill: false,
+      serves: "Family of 5",
+      blurb: "The big one. Jimmy Dean sausage white gravy over biscuits, with scrambled eggs on the side.",
+      steps: [
+        "Bake biscuits per the package.",
+        "Brown the Jimmy Dean sausage in a skillet; leave the drippings.",
+        "Sprinkle in flour, stir 1 min, then whisk in milk; simmer to thicken. Salt & lots of pepper.",
+        "Scramble the eggs in butter. Spoon gravy over split biscuits."
+      ],
+      ingredients: [
+        { item: "Jimmy Dean sausage roll", qty: "1 lb", cat: "Meat" },
+        { item: "Canned/frozen biscuits", qty: "2 cans", cat: "Bread & bakery" },
+        { item: "Eggs", qty: "1 dozen", cat: "Dairy & eggs" },
+        { item: "Milk", qty: "1/2 gal", cat: "Dairy & eggs" },
+        { item: "Butter", qty: "1 stick", cat: "Dairy & eggs" },
+        { item: "All-purpose flour", qty: "1 bag", cat: "Pantry" },
+        { item: "Salt & pepper", qty: "to taste", cat: "Pantry" }
+      ]
+    },
+    {
+      id: "breakfast-pancakes",
+      slot: "Breakfast",
+      name: "Pancakes + Bacon",
+      grill: false,
+      serves: "Family of 5",
+      blurb: "The easy morning. Pancakes off a griddle/skillet, crispy bacon, syrup. Kids love it.",
+      steps: [
+        "Mix pancake batter per the box.",
+        "Cook bacon first; reserve a little fat for flavor if you like.",
+        "Griddle pancakes until bubbles set, flip once.",
+        "Serve with butter + syrup."
+      ],
+      ingredients: [
+        { item: "Bacon", qty: "1 pack", cat: "Meat" },
+        { item: "Pancake mix", qty: "1 box", cat: "Pantry" },
+        { item: "Maple syrup", qty: "1 bottle", cat: "Pantry" },
+        { item: "Butter", qty: "1 stick", cat: "Dairy & eggs" },
+        { item: "Eggs", qty: "1 dozen", cat: "Dairy & eggs" },
+        { item: "Milk", qty: "1/2 gal", cat: "Dairy & eggs" }
+      ]
+    }
+  ]
+};

@@ -133,7 +133,7 @@
   /* ----- localStorage (votes + checklists) ----- */
   function load(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch (e) { return {}; } }
   function save(key, o) { try { localStorage.setItem(key, JSON.stringify(o)); } catch (e) {} }
-  var VKEY = "bb_votes_v1", PKEY = "bb_packing_v1", SKEY = "bb_scavenger_v1", TKEY = "bb_theme";
+  var VKEY = "bb_votes_v1", PKEY = "bb_packing_v1", SKEY = "bb_scavenger_v1", TKEY = "bb_theme", KKEY = "bb_kitchen_v1";
 
   /* =========================================================================
      RENDERERS
@@ -420,6 +420,174 @@
     });
   }
 
+  /* --- cabin kitchen: optional meals → ONE consolidated grocery list --------
+     State (KKEY): "meal|<id>" = 0 means SKIPPED (default = included);
+                   "buy|<item>" = 1 means checked off the grocery list.       */
+  var GROCERY_ORDER = ["Meat", "Produce", "Dairy & eggs", "Bread & bakery", "Pantry"];
+
+  function mealSkipped(state, id) { return state["meal|" + id] === 0; }
+
+  // Collapse a list of qty strings: identical ones become "qty ×N"; mixed ones join with " + ".
+  function qtyLabel(qtys) {
+    if (!qtys || !qtys.length) return "";
+    var counts = {}, order = [];
+    qtys.forEach(function (q) { if (!(q in counts)) order.push(q); counts[q] = (counts[q] || 0) + 1; });
+    return order.map(function (q) { return q + (counts[q] > 1 ? " \u00d7" + counts[q] : ""); }).join(" + ");
+  }
+
+  function buildGrocery(state) {
+    var map = {}; // lower-item -> { item, cat, qtys[], stores[] }
+    CABIN_KITCHEN.meals.forEach(function (m) {
+      if (mealSkipped(state, m.id)) return;
+      m.ingredients.forEach(function (ing) {
+        var k = ing.item.toLowerCase();
+        if (!map[k]) map[k] = { item: ing.item, cat: ing.cat, qtys: [], stores: [] };
+        if (ing.qty && ing.qty !== "to taste") map[k].qtys.push(ing.qty);
+        var st = ing.store || CABIN_KITCHEN.defaultStore;
+        if (map[k].stores.indexOf(st) < 0) map[k].stores.push(st);
+      });
+    });
+    var byCat = {};
+    Object.keys(map).forEach(function (k) {
+      var r = map[k]; (byCat[r.cat] = byCat[r.cat] || []).push(r);
+    });
+    return byCat;
+  }
+
+  function drawGrocery() {
+    var state = load(KKEY), byCat = buildGrocery(state), total = 0, done = 0, html = "";
+    GROCERY_ORDER.forEach(function (cat) {
+      var rows = byCat[cat]; if (!rows || !rows.length) return;
+      rows.sort(function (a, b) { return a.item.localeCompare(b.item); });
+      html += '<div class="check-group"><h3>' + esc(cat) + "</h3>";
+      rows.forEach(function (r) {
+        var key = "buy|" + r.item, on = !!state[key]; total++; if (on) done++;
+        var qty = r.qtys.length ? '<span class="g-qty">' + esc(qtyLabel(r.qtys)) + "</span>" : "";
+        var alt = r.stores.filter(function (s) { return s !== CABIN_KITCHEN.defaultStore; });
+        var store = alt.length ? '<span class="g-store">' + esc(alt.join(", ")) + "</span>" : "";
+        html += '<label class="check ' + (on ? "done" : "") + '"><input type="checkbox" data-buy="' +
+          esc(key) + '" ' + (on ? "checked" : "") + "><span>" + esc(r.item) + " " + qty + " " + store + "</span></label>";
+      });
+      html += "</div>";
+    });
+    var box = $("kitchen-grocery");
+    if (box) box.innerHTML = '<h3 class="grocery-head">Pruett\'s stock-up list</h3>' +
+      '<p class="progress" id="kk-prog">' + done + " / " + total + " bought</p>" +
+      (total ? html : '<p class="muted">No meals selected — toggle a meal back on above.</p>');
+  }
+
+  function renderKitchen() {
+    var state = load(KKEY);
+    var cards = CABIN_KITCHEN.meals.map(function (m) {
+      var skip = mealSkipped(state, m.id);
+      var steps = m.steps.map(function (s) { return "<li>" + esc(s) + "</li>"; }).join("");
+      var ings = m.ingredients.map(function (ing) { return esc(ing.item); }).join(" · ");
+      return '<article class="card meal reveal ' + (skip ? "skipped" : "") + '">' +
+        '<div class="card-head"><h3>' + esc(m.name) + "</h3>" +
+        '<span class="tag cat ' + (m.slot === "Dinner" ? "cat-rust" : "cat-kraft") + '">' + esc(m.slot) + "</span>" +
+        (m.grill ? '<span class="tag flag">grill</span>' : "") + "</div>" +
+        '<p class="blurb">' + esc(m.blurb) + '</p><p class="notes">Serves: ' + esc(m.serves) + "</p>" +
+        '<ol class="meal-steps">' + steps + "</ol>" +
+        '<p class="meal-ings"><strong>You\'ll need:</strong> ' + ings + "</p>" +
+        '<label class="meal-toggle"><input type="checkbox" data-meal="' + esc(m.id) + '" ' +
+        (skip ? "" : "checked") + "> Include this meal &amp; its groceries</label></article>";
+    }).join("");
+
+    $("kitchen").innerHTML =
+      '<p class="kitchen-intro">' + esc(CABIN_KITCHEN.intro) + "</p>" +
+      '<div class="grid">' + cards + "</div>" +
+      '<div id="kitchen-grocery" class="grocery"></div>';
+
+    drawGrocery();
+
+    $("kitchen").addEventListener("change", function (e) {
+      var c = e.target, s = load(KKEY);
+      if (c.dataset.meal) {
+        if (c.checked) delete s["meal|" + c.dataset.meal]; else s["meal|" + c.dataset.meal] = 0;
+        save(KKEY, s);
+        c.closest(".meal").classList.toggle("skipped", !c.checked);
+        drawGrocery();
+      } else if (c.dataset.buy) {
+        if (c.checked) s[c.dataset.buy] = 1; else delete s[c.dataset.buy];
+        save(KKEY, s);
+        c.closest(".check").classList.toggle("done", c.checked);
+        var t = 0, dn = 0;
+        document.querySelectorAll("[data-buy]").forEach(function (x) { t++; if (x.checked) dn++; });
+        var p = $("kk-prog"); if (p) p.textContent = dn + " / " + t + " bought";
+      }
+    });
+  }
+
+  /* --- print / save-to-PDF: build a clean "the plan" sheet (selections only) -- */
+  function planActivities() {
+    var votes = load(VKEY);
+    return ACTIVITIES
+      .map(function (a) { return { a: a, n: (votes[a.id] || []).length, who: (votes[a.id] || []) }; })
+      .filter(function (x) { return x.n > 0; })
+      .sort(function (x, y) { return y.n - x.n; });
+  }
+
+  function buildPrintSheet() {
+    var sheet = $("print-sheet"); if (!sheet) return;
+    var stayRows = STAY_DAYS.map(function (d) {
+      var anc = [d.anchor, d.anchor2].filter(Boolean).map(function (id) {
+        var a = ACT_BY_ID[id]; return a ? a.name : "";
+      }).filter(Boolean).join(", ");
+      return "<tr><td>" + d.dow + " " + md(d.date) + "</td><td><strong>" + esc(d.title) + "</strong>" +
+        (anc ? " — " + esc(anc) : "") + "<br><span class='p-note'>" + esc(d.notes) + "</span></td></tr>";
+    }).join("");
+    var homeRows = SCENIC_HOME.map(function (d) {
+      return "<tr><td>" + d.dow + " " + md(d.date) + "</td><td><strong>" + esc(d.title) + "</strong>" +
+        (d.overnight ? " · overnight " + esc(d.overnight) : "") +
+        "<br><span class='p-note'>" + esc(d.notes) + "</span></td></tr>";
+    }).join("");
+
+    var voted = planActivities();
+    var votedHtml = voted.length
+      ? "<ul class='p-list'>" + voted.map(function (x) {
+          return "<li><strong>" + esc(x.a.name) + "</strong> — " + x.n + " vote" + (x.n === 1 ? "" : "s") +
+            " <span class='p-note'>(" + esc(x.who.join(", ")) + ")</span></li>";
+        }).join("") + "</ul>"
+      : "<p class='p-note'>No activities voted yet — pick favorites in the app first.</p>";
+
+    var kstate = load(KKEY);
+    var meals = CABIN_KITCHEN.meals.filter(function (m) { return !mealSkipped(kstate, m.id); });
+    var mealsHtml = meals.length
+      ? "<ul class='p-list'>" + meals.map(function (m) { return "<li>" + esc(m.slot) + ": <strong>" + esc(m.name) + "</strong></li>"; }).join("") + "</ul>"
+      : "<p class='p-note'>No cabin meals selected.</p>";
+    var byCat = buildGrocery(kstate), groceryHtml = "";
+    GROCERY_ORDER.forEach(function (cat) {
+      var rows = byCat[cat]; if (!rows || !rows.length) return;
+      rows.sort(function (a, b) { return a.item.localeCompare(b.item); });
+      groceryHtml += "<div class='p-gcat'><strong>" + esc(cat) + ":</strong> " +
+        rows.map(function (r) {
+          var q = r.qtys.length ? " (" + qtyLabel(r.qtys) + ")" : "";
+          return esc(r.item + q);
+        }).join(", ") + "</div>";
+    });
+
+    var packHtml = PACKING.map(function (g) {
+      return "<div class='p-gcat'><strong>" + esc(g.group) + ":</strong> ☐ " + g.items.map(esc).join(" · ☐ ") + "</div>";
+    }).join("");
+
+    sheet.innerHTML =
+      "<h1>Broken Bow 2026 — The Plan</h1>" +
+      "<p class='p-sub'>June 7–11 · Hochatown, OK · " + TRIP.family.map(function (f) { return f.name; }).join(", ") + "</p>" +
+      "<p class='p-sub'>Cabin pin: " + TRIP.lodging.lat + ", " + TRIP.lodging.lng + " (VRBO #" + TRIP.lodging.vrbo + ")</p>" +
+      "<h2>The stay</h2><table class='p-table'>" + stayRows + "</table>" +
+      "<h2>Voted activities</h2>" + votedHtml +
+      "<h2>Cabin kitchen</h2>" + mealsHtml + "<div class='p-grocery'>" + groceryHtml + "</div>" +
+      "<h2>Scenic way home</h2><table class='p-table'>" + homeRows + "</table>" +
+      "<h2>Packing</h2><div class='p-grocery'>" + packHtml + "</div>" +
+      "<p class='p-foot'>Prices/hours approximate — confirm at the door. No cell service at the cabin — screenshot your maps. Printed " +
+      new Date().toLocaleDateString() + ".</p>";
+  }
+
+  function initPrint() {
+    var b = $("printBtn"); if (!b) return;
+    b.addEventListener("click", function () { buildPrintSheet(); window.print(); });
+  }
+
   /* --- theme toggle (campfire) — LIGHT DEFAULT, manual only (no auto-night) --- */
   function applyTheme(t) {
     document.documentElement.setAttribute("data-theme", t);
@@ -519,11 +687,14 @@
     safe(renderActivities);
     safe(renderEat);
     safe(renderShop);
+    safe(renderKitchen);
     safe(renderHome);
     safe(renderPacking);
     safe(renderScavenger);
     safe(renderSpinner);
     safe(initTheme);
+    safe(initPrint);
+    safe(buildPrintSheet);
     safe(function () { $("year").textContent = new Date().getFullYear(); });
     safe(function () { $("heroBadge").addEventListener("click", confetti); });
     safe(initAccordions);
