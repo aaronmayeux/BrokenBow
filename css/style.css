@@ -17,7 +17,14 @@
   --accent-2:#a64f22;
   --line:    #d8c7a4;
   --ok:      #2f6b46;
+  --gold:    #b07a26;   /* rating star (earthy gold) */
   --shadow:  rgba(42,34,24,.18);
+
+  /* category color-coding — palette-only, NO rainbow (green/rust/kraft/sage) */
+  --cat-outdoors: #2f4a3c;  /* forest green  */
+  --cat-animals:  #a64f22;  /* rust          */
+  --cat-play:     #8a6d3b;  /* kraft / olive */
+  --cat-indoors:  #5d7b66;  /* sage          */
 }
 
 html[data-theme="night"] {
@@ -32,7 +39,13 @@ html[data-theme="night"] {
   --accent-2:#f0954f;
   --line:    #3a2f22;
   --ok:      #7fbf93;
+  --gold:    #d8b057;
   --shadow:  rgba(0,0,0,.45);
+
+  --cat-outdoors: #84a98c;
+  --cat-animals:  #e0813a;
+  --cat-play:     #c9a86a;
+  --cat-indoors:  #7d9d86;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -115,6 +128,14 @@ html.js .reveal.in { opacity: 1; transform: none; }
 .cd-lab { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
 .cd-caption { font-style: italic; color: var(--brand-2); }
 
+/* ---------- trip-wide banner ---------- */
+.banner {
+  margin: 18px 0 6px; padding: 11px 16px;
+  background: var(--surface-2); border: 1.5px solid var(--line);
+  border-left: 5px solid var(--accent); border-radius: 10px;
+  font-family: "Bitter", serif; font-weight: 600; font-size: 13.5px; color: var(--brand);
+}
+
 /* ---------- sections ---------- */
 section { padding: 30px 0; border-top: 1px solid var(--line); }
 .section-title { display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px; }
@@ -123,8 +144,26 @@ section { padding: 30px 0; border-top: 1px solid var(--line); }
   font-family: "Bitter", serif; font-weight: 700; color: var(--accent);
   font-size: 14px; border: 2px solid var(--accent); border-radius: 50%;
   width: 28px; height: 28px; display: grid; place-items: center; flex: none;
+  align-self: center;
 }
 .lead { color: var(--muted); margin-bottom: 14px; }
+
+/* ---------- collapsible accordions (native <details>) ---------- */
+details.acc > summary {
+  cursor: pointer; list-style: none; margin-bottom: 0;
+  align-items: center; user-select: none;
+}
+details.acc > summary::-webkit-details-marker { display: none; }
+details.acc > summary::after {
+  content: "›"; margin-left: auto; flex: none;
+  font-family: "Bitter", serif; font-weight: 700; font-size: 26px; line-height: 1;
+  color: var(--accent); transform: rotate(90deg);
+  transition: transform .25s ease; padding: 0 4px;
+}
+details.acc[open] > summary::after { transform: rotate(-90deg); }
+details.acc > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
+details.acc > summary:hover h2 { color: var(--brand-2); }
+.acc-body { padding-top: 16px; }
 
 /* ---------- cards / grid ---------- */
 .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
@@ -136,14 +175,29 @@ section { padding: 30px 0; border-top: 1px solid var(--line); }
 .card h3 { font-size: 18px; color: var(--brand); }
 .blurb { margin: 8px 0 6px; }
 .notes { font-size: 13.5px; color: var(--muted); }
+.price-detail { font-size: 12.5px; font-style: italic; color: var(--brand-2); margin-top: 6px; }
+.pickif {
+  margin-top: 10px; padding: 9px 12px; font-size: 13.5px; line-height: 1.45;
+  color: var(--brand); background: var(--surface-2);
+  border-left: 4px solid var(--accent); border-radius: 8px;
+}
 .dir {
   display: inline-block; margin-top: 10px; font-family: "Bitter", serif;
   font-weight: 600; font-size: 13px; text-decoration: none; color: var(--accent);
 }
 .dir:hover { color: var(--accent-2); }
 
-/* ---------- tags ---------- */
-.tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 2px; }
+/* activity cards get a palette-coded left edge by category */
+.card.act { border-left-width: 6px; }
+.card.act.cat-outdoors { border-left-color: var(--cat-outdoors); }
+.card.act.cat-animals  { border-left-color: var(--cat-animals); }
+.card.act.cat-play     { border-left-color: var(--cat-play); }
+.card.act.cat-indoors  { border-left-color: var(--cat-indoors); }
+
+/* ---------- tags / pills ---------- */
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 2px; align-items: center; }
+.tags.flags-row { margin-top: 6px; }
+.tags.flags-row:empty { display: none; }
 .tag {
   font-family: "Bitter", serif; font-size: 11.5px; font-weight: 600;
   padding: 3px 9px; border-radius: 20px; border: 1.5px solid var(--line); color: var(--muted);
@@ -151,12 +205,51 @@ section { padding: 30px 0; border-top: 1px solid var(--line); }
 .tag.open  { background: var(--ok); color: #fff; border-color: var(--ok); }
 .tag.closed{ background: transparent; color: var(--accent); border-color: var(--accent); }
 .tag.call  { color: var(--accent); border-color: var(--accent); border-style: dashed; }
-.tag.cat   { color: var(--brand); border-color: var(--brand); }
 .tag.hours { color: var(--text); }
+
+/* cuisine = PLAIN pill, no per-cuisine color */
+.tag.cuisine { color: var(--text); border-color: var(--line); background: var(--surface-2); }
+
+/* price tier pill */
+.tag.price { color: var(--brand); border-color: var(--brand); font-weight: 700; letter-spacing: .04em; }
+
+/* action flags — little kraft "stamps" */
+.tag.flag {
+  background: var(--surface-2); color: var(--brand-2);
+  border-color: color-mix(in srgb, var(--brand) 30%, var(--line));
+}
+
+/* category pill — palette tint per category */
+.tag.cat { color: var(--brand); border-color: var(--brand); }
+.tag.cat.cat-outdoors { color: var(--cat-outdoors); border-color: var(--cat-outdoors); background: color-mix(in srgb, var(--cat-outdoors) 10%, transparent); }
+.tag.cat.cat-animals  { color: var(--cat-animals);  border-color: var(--cat-animals);  background: color-mix(in srgb, var(--cat-animals) 10%, transparent); }
+.tag.cat.cat-play     { color: var(--cat-play);     border-color: var(--cat-play);     background: color-mix(in srgb, var(--cat-play) 12%, transparent); }
+.tag.cat.cat-indoors  { color: var(--cat-indoors);  border-color: var(--cat-indoors);  background: color-mix(in srgb, var(--cat-indoors) 12%, transparent); }
+
 .badge-day {
   font-family: "Bitter", serif; font-size: 11px; font-weight: 700; flex: none;
   background: var(--accent); color: #fff; padding: 3px 9px; border-radius: 20px;
 }
+
+/* ---------- rating ---------- */
+.rating {
+  font-family: "Bitter", serif; font-weight: 700; font-size: 13px; color: var(--text);
+  white-space: nowrap; flex: none;
+}
+.rating .star { color: var(--gold); margin-right: 2px; }
+.rating .rcount { font-weight: 400; font-size: 11.5px; color: var(--muted); }
+/* when a rating sits in the card head, keep it from stretching the title */
+.card-head .rating { margin-top: 2px; }
+
+/* ---------- cuisine filter ---------- */
+.filter-row { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
+.filter-chip {
+  cursor: pointer; font-family: "Bitter", serif; font-weight: 600; font-size: 12.5px;
+  padding: 5px 12px; border-radius: 20px; border: 1.5px solid var(--line);
+  background: var(--surface); color: var(--brand); transition: .15s;
+}
+.filter-chip:hover { border-color: var(--brand); }
+.filter-chip.on { background: var(--brand); color: #fff; border-color: var(--brand); }
 
 /* ---------- voting ---------- */
 .vote-row { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -179,6 +272,7 @@ section { padding: 30px 0; border-top: 1px solid var(--line); }
 }
 .tl-when { font-family: "Bitter", serif; font-weight: 700; color: var(--brand); }
 .tl-note { font-size: 13.5px; color: var(--muted); }
+.dir.inline { margin-top: 0; font-size: 12px; }
 .route-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 16px; }
 .route-chips span {
   font-size: 12px; background: var(--surface-2); padding: 3px 9px; border-radius: 6px; color: var(--text);
@@ -241,6 +335,7 @@ section { padding: 30px 0; border-top: 1px solid var(--line); }
 
 /* ---------- footer ---------- */
 footer { text-align: center; padding: 30px 0 50px; color: var(--muted); font-size: 13px; border-top: 2px solid var(--line); }
+.fineprint { font-size: 11.5px; color: var(--muted); margin-top: 8px; max-width: 640px; margin-left: auto; margin-right: auto; line-height: 1.5; }
 
 /* ---------- confetti ---------- */
 #confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999; display: none; }
@@ -248,4 +343,5 @@ footer { text-align: center; padding: 30px 0 50px; color: var(--muted); font-siz
 @media (max-width: 480px) {
   .day-date { width: 54px; }
   .cd-cell { min-width: 56px; }
+  .section-title h2 { font-size: 22px; }
 }
