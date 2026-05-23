@@ -138,6 +138,7 @@
   /* voters = family minus the 1-yr-old → Aaron, Lucia, Zelphia, Melania */
   var VOTERS = TRIP.family.filter(function (f) { return !f.age || f.age >= 4; });
   var activitiesBound = false; // bind the voting click handler only once
+  var eatBound = false;        // bind the restaurant voting/filter handlers only once
   /* every activity id a given person is currently "in" for, from the votes map */
   function picksFor(name, v) { var out = []; for (var id in v) { if (v[id] && v[id].indexOf(name) >= 0) out.push(id); } return out; }
   function pushPersonVotes(name, v) { if (window.BBSync) BBSync.pushVotes(name.toLowerCase(), name, picksFor(name, v)); }
@@ -181,13 +182,16 @@
     var day = all.filter(function (d) { return d.date === today; })[0];
     var html;
     if (day) {
-      var anchors = [day.anchor, day.anchor2].filter(Boolean).map(function (id) {
+      var plan = currentPlan(), pd = plan.days[day.date] || { anchor: day.anchor, anchor2: day.anchor2, fromVote: false };
+      var anchors = [pd.anchor, pd.anchor2].filter(Boolean).map(function (id) {
         var a = ACT_BY_ID[id]; if (!a) return "";
-        return '<a class="dir" href="' + mapsPlaceUrl(a) + '" target="_blank" rel="noopener">' + esc(a.name) + " ↗</a>";
+        return '<a class="dir" href="' + mapsPlaceUrl(a) + '" target="_blank" rel="noopener">' + esc(a.name) +
+          (pd.fromVote ? ' <span class="vote-pick">★ voted</span>' : "") + " ↗</a>";
       }).join("<br>");
       html = '<div class="card"><div class="card-head"><h3>Today · ' + day.dow + " " + md(day.date) +
         '</h3></div><p class="blurb"><strong>' + esc(day.title) + "</strong></p><p class=\"notes\">" + esc(day.notes) + "</p>" +
-        (anchors ? '<p style="margin-top:8px">' + anchors + "</p>" : "") + "</div>";
+        (anchors ? '<p style="margin-top:8px">' + anchors + "</p>" : "") +
+        mealLineHtml(plan.meals[day.date]) + "</div>";
     } else if (today < TRIP.dates.start) {
       var first = STAY_DAYS[0];
       html = '<div class="card"><h3>Not there yet — but soon!</h3><p class="blurb">First up: <strong>' +
@@ -255,17 +259,24 @@
   }
 
   /* --- the stay (Leg 2) --- */
-  function dayCard(d) {
-    var anchors = [d.anchor, d.anchor2].filter(Boolean).map(function (id) {
+  function dayCard(d, plan) {
+    var pd = (plan && plan.days[d.date]) || { anchor: d.anchor, anchor2: d.anchor2, fromVote: false };
+    var anchors = [pd.anchor, pd.anchor2].filter(Boolean).map(function (id) {
       var a = ACT_BY_ID[id]; if (!a) return "";
-      return '<a class="dir" href="' + mapsPlaceUrl(a) + '" target="_blank" rel="noopener">' + esc(a.name) + " ↗</a>";
+      return '<a class="dir" href="' + mapsPlaceUrl(a) + '" target="_blank" rel="noopener">' + esc(a.name) +
+        (pd.fromVote ? ' <span class="vote-pick">★ voted</span>' : "") + " ↗</a>";
     }).join("<br>");
+    var meals = plan ? mealLineHtml(plan.meals[d.date]) : "";
     return '<div class="card reveal day ' + (d.type === "travel" ? "travel" : "") + '">' +
       '<div class="day-date"><div class="dow">' + d.dow + '</div><div class="dnum">' + parseInt(d.date.slice(8, 10), 10) + "</div></div>" +
       '<div class="day-body"><h3>' + esc(d.title) + "</h3><p class=\"notes\">" + esc(d.notes) + "</p>" +
-      (anchors ? '<p style="margin-top:6px">' + anchors + "</p>" : "") + "</div></div>";
+      (anchors ? '<p style="margin-top:6px">' + anchors + "</p>" : "") + meals + "</div></div>";
   }
-  function renderStay() { $("stay").innerHTML = STAY_DAYS.map(dayCard).join(""); }
+  function renderStay() {
+    var plan = currentPlan();
+    var note = '<p class="plan-note">Auto-built from everyone\u2019s votes \u2014 vote in <strong>Activities</strong> and <strong>Where to Eat</strong> to reshape it. Days a place is closed are skipped automatically.</p>';
+    $("stay").innerHTML = note + STAY_DAYS.map(function (d) { return dayCard(d, plan); }).join("");
+  }
 
   /* --- activities + per-person voting --- */
   function renderActivities() {
@@ -302,6 +313,7 @@
         var t = document.querySelector('[data-tally="' + act + '"]');
         if (t) t.textContent = v[act].length + " vote" + (v[act].length === 1 ? "" : "s");
         pushPersonVotes(person, v); // mirror this person's picks to everyone's phone
+        safe(renderStay); safe(renderToday); // votes reshape the auto-built itinerary
       });
     }
   }
@@ -321,37 +333,66 @@
         });
       });
       save(VKEY, v);
-      safe(renderActivities); // delegated listener already bound once -> safe to re-render
+      safe(renderActivities); // delegated listeners bound once -> safe to re-render
+      safe(renderEat);        // restaurant vote buttons + tallies
+      safe(renderStay);       // itinerary reshaped by activity + dinner votes
+      safe(renderToday);
     });
   }
 
   /* --- restaurants (cuisine pills + optional filter) --- */
-  function restaurantCard(p) {
+  function restaurantCard(p, votes) {
+    votes = votes || load(VKEY);
+    var voters = VOTERS.map(function (f) {
+      var on = (votes[p.id] || []).indexOf(f.name) >= 0;
+      return '<button class="voter ' + (on ? "on" : "") + '" data-act="' + p.id + '" data-person="' +
+        esc(f.name) + '" title="' + esc(f.name) + '">' + esc(f.name.charAt(0)) + "</button>";
+    }).join("");
+    var n = (votes[p.id] || []).length;
     return '<article class="card reveal" data-cuisine="' + esc(p.cuisine) + '"><div class="card-head"><h3>' + esc(p.name) +
       '</h3>' + ratingHtml(p) + "</div>" +
       '<div class="tags"><span class="tag cuisine">' + esc(p.cuisine) + "</span>" + priceTag(p) + hoursTags(p.hours) + "</div>" +
       '<div class="tags flags-row">' + flagTags(p) + "</div>" +
       '<p class="notes" style="margin-top:8px">' + esc(p.notes) + "</p>" +
       priceDetailHtml(p) + pickIfHtml(p) +
+      '<div class="vote-row"><span class="vote-label">Eat here?</span><div class="voters">' + voters +
+      '</div><span class="tally" data-tally="' + p.id + '">' + n + " vote" + (n === 1 ? "" : "s") + "</span></div>" +
       '<a class="dir" href="' + mapsPlaceUrl(p) + '" target="_blank" rel="noopener">View on Maps ↗</a></article>';
   }
   function renderEat() {
+    var votes = load(VKEY);
     // optional cuisine filter (session-only)
     var cuisines = [];
     RESTAURANTS.forEach(function (r) { if (cuisines.indexOf(r.cuisine) < 0) cuisines.push(r.cuisine); });
     var chips = '<button class="filter-chip on" data-cuisine="all">All</button>' +
       cuisines.map(function (c) { return '<button class="filter-chip" data-cuisine="' + esc(c) + '">' + esc(c) + "</button>"; }).join("");
     $("eat-filter").innerHTML = chips;
-    $("eat").innerHTML = RESTAURANTS.map(restaurantCard).join("");
+    $("eat").innerHTML = RESTAURANTS.map(function (r) { return restaurantCard(r, votes); }).join("");
 
-    $("eat-filter").addEventListener("click", function (e) {
-      var b = e.target.closest(".filter-chip"); if (!b) return;
-      var pick = b.dataset.cuisine;
-      $("eat-filter").querySelectorAll(".filter-chip").forEach(function (c) { c.classList.toggle("on", c === b); });
-      $("eat").querySelectorAll(".card").forEach(function (card) {
-        card.style.display = (pick === "all" || card.dataset.cuisine === pick) ? "" : "none";
+    if (!eatBound) {
+      eatBound = true;
+      $("eat-filter").addEventListener("click", function (e) {
+        var b = e.target.closest(".filter-chip"); if (!b) return;
+        var pick = b.dataset.cuisine;
+        $("eat-filter").querySelectorAll(".filter-chip").forEach(function (c) { c.classList.toggle("on", c === b); });
+        $("eat").querySelectorAll(".card").forEach(function (card) {
+          card.style.display = (pick === "all" || card.dataset.cuisine === pick) ? "" : "none";
+        });
       });
-    });
+      $("eat").addEventListener("click", function (e) {
+        var b = e.target.closest(".voter"); if (!b) return;
+        var act = b.dataset.act, person = b.dataset.person, v = load(VKEY);
+        v[act] = v[act] || [];
+        var i = v[act].indexOf(person);
+        if (i >= 0) v[act].splice(i, 1); else v[act].push(person);
+        save(VKEY, v);
+        b.classList.toggle("on");
+        var t = document.querySelector('[data-tally="' + act + '"]');
+        if (t) t.textContent = v[act].length + " vote" + (v[act].length === 1 ? "" : "s");
+        pushPersonVotes(person, v); // dinner votes share the same Firestore votes collection
+        safe(renderStay); safe(renderToday); // votes reshape the dinner plan
+      });
+    }
   }
 
   /* --- provisions --- */
@@ -557,14 +598,106 @@
       .sort(function (x, y) { return y.n - x.n; });
   }
 
+  /* ---- Cluster D / #30: vote-driven plan -----------------------------------
+     Activities + restaurants share ONE votes map (ids are globally unique). The
+     three activity days auto-fill from the top vote-getters, never landing a
+     place on a day it's closed; dinners fill from restaurant votes; breakfasts
+     come straight from the Cabin Kitchen toggles (#27). Everything falls back to
+     the locked defaults when there are no votes, so the plan is never empty. */
+
+  function dowOf(dateStr) {
+    var p = dateStr.split("-");
+    return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])).getUTCDay(); // 0=Sun … 6=Sat
+  }
+  function closedOnDow(hours, dow) {
+    if (!hours || hours.alwaysOpen) return false;
+    if (hours.overrides && Object.prototype.hasOwnProperty.call(hours.overrides, String(dow))) {
+      return hours.overrides[String(dow)] == null; // explicit null override = closed that day
+    }
+    return false; // default spec applies → treat as open
+  }
+  function planRestaurants() {
+    var votes = load(VKEY);
+    return RESTAURANTS
+      .map(function (r) { return { r: r, n: (votes[r.id] || []).length, who: (votes[r.id] || []) }; })
+      .filter(function (x) { return x.n > 0; })
+      .sort(function (x, y) { return y.n - x.n; });
+  }
+
+  /* date -> { anchor, anchor2, fromVote, n }. Top votes fill the 3 activity days
+     chronologically, skipping closures; otherwise the day keeps its locked anchor. */
+  function buildItinerary() {
+    var ranked = planActivities(), used = {}, out = {};
+    STAY_DAYS.forEach(function (d) {
+      if (d.type !== "activity") { out[d.date] = { anchor: d.anchor, anchor2: d.anchor2, fromVote: false, n: 0 }; return; }
+      var dow = dowOf(d.date), pick = null;
+      for (var i = 0; i < ranked.length; i++) {
+        if (used[ranked[i].a.id]) continue;
+        if (closedOnDow(ranked[i].a.hours, dow)) continue;
+        pick = ranked[i]; break;
+      }
+      if (pick) { used[pick.a.id] = 1; out[d.date] = { anchor: pick.a.id, anchor2: null, fromVote: true, n: pick.n }; }
+      else { out[d.date] = { anchor: d.anchor, anchor2: d.anchor2, fromVote: false, n: 0 }; }
+    });
+    return out;
+  }
+
+  /* date -> { breakfast:{name,kind}, dinner:{name,kind,n} }.
+     Dinner: top-voted restaurant per night (skip closures, no repeats) → toggled-on
+     cabin dinners → generic grill night. Breakfast: toggled-on Cabin Kitchen breakfasts. */
+  function buildMealPlan() {
+    var kstate = load(KKEY);
+    var cabinDin = CABIN_KITCHEN.meals.filter(function (m) { return m.slot === "Dinner" && !mealSkipped(kstate, m.id); });
+    var cabinBrk = CABIN_KITCHEN.meals.filter(function (m) { return m.slot === "Breakfast" && !mealSkipped(kstate, m.id); });
+    var rranked = planRestaurants(), rused = {};
+    var nights = STAY_DAYS.filter(function (d) { return d.date < TRIP.dates.end; });            // every night but checkout AM
+    var mornings = STAY_DAYS.filter(function (d) { return d.type === "activity" || d.date === TRIP.dates.end; });
+    var out = {}, ci = 0, bi = 0;
+    nights.forEach(function (d) {
+      var dow = dowOf(d.date), chosen = null;
+      for (var i = 0; i < rranked.length; i++) {
+        if (rused[rranked[i].r.id]) continue;
+        if (closedOnDow(rranked[i].r.hours, dow)) continue;
+        chosen = { name: rranked[i].r.name, kind: "out", n: rranked[i].n }; rused[rranked[i].r.id] = 1; break;
+      }
+      if (!chosen && ci < cabinDin.length) chosen = { name: cabinDin[ci++].name, kind: "cabin", n: 0 };
+      if (!chosen) chosen = { name: "Grill / leftovers at the cabin", kind: "cabin", n: 0 };
+      out[d.date] = out[d.date] || {}; out[d.date].dinner = chosen;
+    });
+    mornings.forEach(function (d) {
+      out[d.date] = out[d.date] || {};
+      out[d.date].breakfast = bi < cabinBrk.length
+        ? { name: cabinBrk[bi++].name, kind: "cabin" }
+        : { name: "Easy breakfast at the cabin", kind: "cabin" };
+    });
+    return out;
+  }
+
+  function currentPlan() { return { days: buildItinerary(), meals: buildMealPlan() }; }
+
+  function mealLineHtml(m) {
+    if (!m) return "";
+    var parts = [];
+    if (m.breakfast) parts.push("<strong>Breakfast:</strong> " + esc(m.breakfast.name));
+    if (m.dinner) parts.push("<strong>Dinner:</strong> " + esc(m.dinner.name) +
+      (m.dinner.kind === "out" ? ' <span class="vote-pick">★ voted</span>' : ""));
+    return parts.length ? '<p class="plan-eats">' + parts.join(" &nbsp;·&nbsp; ") + "</p>" : "";
+  }
+
   function buildPrintSheet() {
     var sheet = $("print-sheet"); if (!sheet) return;
+    var plan = currentPlan();
     var stayRows = STAY_DAYS.map(function (d) {
-      var anc = [d.anchor, d.anchor2].filter(Boolean).map(function (id) {
+      var pd = plan.days[d.date] || { anchor: d.anchor, anchor2: d.anchor2 };
+      var anc = [pd.anchor, pd.anchor2].filter(Boolean).map(function (id) {
         var a = ACT_BY_ID[id]; return a ? a.name : "";
       }).filter(Boolean).join(", ");
+      var m = plan.meals[d.date] || {}, eats = [];
+      if (m.breakfast) eats.push("B: " + m.breakfast.name);
+      if (m.dinner) eats.push("D: " + m.dinner.name);
       return "<tr><td>" + d.dow + " " + md(d.date) + "</td><td><strong>" + esc(d.title) + "</strong>" +
-        (anc ? " — " + esc(anc) : "") + "<br><span class='p-note'>" + esc(d.notes) + "</span></td></tr>";
+        (anc ? " — " + esc(anc) : "") + "<br><span class='p-note'>" + esc(d.notes) + "</span>" +
+        (eats.length ? "<br><span class='p-note'>" + esc(eats.join("  ·  ")) + "</span>" : "") + "</td></tr>";
     }).join("");
     var homeRows = SCENIC_HOME.map(function (d) {
       return "<tr><td>" + d.dow + " " + md(d.date) + "</td><td><strong>" + esc(d.title) + "</strong>" +
