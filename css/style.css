@@ -419,3 +419,55 @@ footer { text-align: center; padding: 30px 0 50px; color: var(--muted); font-siz
   font-size: .7rem; font-weight: 700; color: var(--accent);
   letter-spacing: .02em; white-space: nowrap;
 }
+
+/* ── Cluster D1 / #31 — scavenger hunt v2 (scored, kid + adult) ──────────── */
+.sc-board { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 6px; }
+.sc-player {
+  display: flex; align-items: center; gap: 6px; background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px 5px 10px;
+  font-family: "Bitter", serif;
+}
+.sc-player.lead { background: var(--brand); border-color: var(--brand); color: #fff; }
+.sc-crown { color: var(--gold); font-size: .95rem; }
+.sc-player.lead .sc-crown { color: #ffe9b0; }
+.sc-name { font-weight: 600; font-size: .9rem; }
+.sc-pts { font-weight: 800; font-size: 1rem; min-width: 1.2em; text-align: center; }
+.sc-player.pop { animation: scPop .42s ease; }
+@keyframes scPop { 0% { transform: scale(1); } 35% { transform: scale(1.18); } 100% { transform: scale(1); } }
+
+.sc-howto { font-size: .8rem; color: var(--muted); line-height: 1.45; margin: 2px 0 14px; }
+.sc-group {
+  font-family: "Bitter", serif; color: var(--brand); font-size: 1.02rem;
+  margin: 20px 0 8px; padding-bottom: 5px; border-bottom: 2px solid var(--line);
+}
+
+.sc-item {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px; margin: 8px 0;
+}
+.sc-emoji { font-size: 1.7rem; line-height: 1; width: 2rem; text-align: center; flex: none; }
+.sc-text { flex: 1 1 140px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sc-label { font-size: .95rem; color: var(--text); }
+.sc-bonus {
+  font-size: .68rem; font-weight: 700; color: #fff; background: var(--accent);
+  border-radius: 999px; padding: 2px 7px; white-space: nowrap;
+}
+.sc-finders { flex: none; margin-left: auto; }
+
+/* the special "farthest license plate" card */
+.sc-plate { align-items: flex-start; }
+.sc-plate-pick { flex: 1 1 100%; margin-top: 4px; }
+.sc-plate-hint { display: block; font-size: .78rem; color: var(--muted); margin: 4px 0 6px; }
+.sc-plate-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sc-plate-row select {
+  flex: 1 1 150px; padding: 7px 9px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--text);
+  font-family: "Spectral", serif; font-size: .9rem;
+}
+.sc-plate-summary { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.sc-plate-summary li { font-size: .82rem; color: var(--text); }
+.sc-plate-summary strong { color: var(--brand); font-weight: 600; }
+.sc-plate-n { color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) { .sc-player.pop { animation: none; } }
