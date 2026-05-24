@@ -309,14 +309,28 @@ details.acc > summary:hover h2 { color: var(--brand-2); }
 
 /* ---------- spinner ---------- */
 .spinner-box { text-align: center; }
+.spin-label {
+  font-family: "Bitter", serif; font-weight: 700; font-size: clamp(20px, 4.5vw, 26px);
+  color: var(--brand); margin: 0 0 14px;
+}
 .spin-btn {
   cursor: pointer; border: none; background: var(--accent); color: #fff;
-  font-family: "Bitter", serif; font-weight: 700; font-size: 16px;
-  padding: 12px 26px; border-radius: 26px; box-shadow: 0 6px 16px var(--shadow);
+  width: 104px; height: 104px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 20px var(--shadow); transition: transform .12s ease, box-shadow .12s ease;
+  -webkit-tap-highlight-color: transparent;
 }
-.spin-btn:active { transform: translateY(1px); }
+.spin-btn:hover { box-shadow: 0 10px 26px var(--shadow); }
+.spin-btn:active { transform: translateY(2px) scale(.97); }
+.spin-btn[aria-disabled="true"] { cursor: default; }
+.spin-arrow { width: 46px; height: 46px; fill: #fff; display: block; }
+.spin-btn.spinning .spin-arrow { animation: bbSpin .5s linear infinite; }
+@keyframes bbSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .spin-btn.spinning .spin-arrow { animation: none; }
+}
 .spin-result {
-  margin-top: 16px; font-family: "Bitter", serif; font-weight: 900;
+  margin-top: 18px; font-family: "Bitter", serif; font-weight: 900;
   font-size: clamp(22px, 5vw, 30px); color: var(--brand); min-height: 36px;
 }
 .spin-result.rolling { color: var(--muted); }
@@ -406,11 +420,11 @@ footer { text-align: center; padding: 30px 0 50px; color: var(--muted); font-siz
 
 /* ── Cluster D / #30 — vote-driven plan ─────────────────────────────────── */
 .plan-note {
-  font-size: .82rem; line-height: 1.4; color: var(--muted);
-  background: var(--surface); border: 1px solid var(--line);
-  border-left: 3px solid var(--accent); border-radius: 6px;
-  padding: 9px 12px; margin: 0 0 16px;
+  font-family: "Bitter", serif; font-size: 1rem; line-height: 1.45;
+  color: var(--brand); background: none; border: none; border-radius: 0;
+  padding: 0; margin: 2px 0 18px;
 }
+.plan-note strong { color: var(--accent); font-weight: 700; }
 .plan-eats { margin-top: 8px; font-size: .9rem; color: var(--text); }
 .plan-eats strong { font-weight: 600; color: var(--brand); }
 .vote-pick {
@@ -443,8 +457,8 @@ footer { text-align: center; padding: 30px 0 50px; color: var(--muted); font-siz
 
 .sc-howto { font-size: .8rem; color: var(--muted); line-height: 1.45; margin: 2px 0 14px; }
 .sc-group {
-  font-family: "Bitter", serif; color: var(--brand); font-size: 1.02rem;
-  margin: 20px 0 8px; padding-bottom: 5px; border-bottom: 2px solid var(--line);
+  font-family: "Bitter", serif; color: var(--brand); font-size: 1.35rem; font-weight: 700;
+  margin: 24px 0 10px; padding-bottom: 6px; border-bottom: 2px solid var(--line);
 }
 
 .sc-item {
@@ -596,4 +610,9 @@ body::before {
   margin: 4px 0 8px; display: flex; align-items: center; gap: 8px;
 }
 .route-divider { height: 1px; background: var(--line); margin: 22px 0; }
+.route-day {
+  font-family: "Bitter", serif; font-size: 14px; font-weight: 700;
+  color: var(--text); margin: 18px 0 10px; text-transform: uppercase; letter-spacing: .05em;
+}
+.route-day + .timeline { margin-bottom: 4px; }
 .spin-pick { font-weight: 700; font-size: inherit; margin-top: 0; }
