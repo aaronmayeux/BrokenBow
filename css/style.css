@@ -453,6 +453,10 @@ footer { text-align: center; padding: 30px 0 50px; color: var(--muted); font-siz
   padding: 10px 12px; margin: 8px 0;
 }
 .sc-emoji { font-size: 1.7rem; line-height: 1; width: 2rem; text-align: center; flex: none; }
+.sc-icon {
+  width: 4rem; height: 4rem; flex: none;   /* ~2x the 1.7rem emoji slot */
+  object-fit: contain; display: block;
+}
 .sc-text { flex: 1 1 140px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .sc-label { font-size: .95rem; color: var(--text); }
 .sc-bonus {
