@@ -454,7 +454,7 @@ footer { text-align: center; padding: 30px 0 50px; color: var(--muted); font-siz
 }
 .sc-emoji { font-size: 1.7rem; line-height: 1; width: 2rem; text-align: center; flex: none; }
 .sc-icon {
-  width: 4rem; height: 4rem; flex: none;   /* ~2x the 1.7rem emoji slot */
+  width: 8rem; height: 8rem; flex: none;   /* doubled per Aaron (was 4rem) */
   object-fit: contain; display: block;
 }
 .sc-text { flex: 1 1 140px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
