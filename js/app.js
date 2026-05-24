@@ -10,6 +10,7 @@
 
   /* ----- lookups ----- */
   var ACT_BY_ID  = {}; ACTIVITIES.forEach(function (a) { ACT_BY_ID[a.id] = a; });
+  var REST_BY_ID = {}; RESTAURANTS.forEach(function (r) { REST_BY_ID[r.id] = r; });
   var LEG3_BY_ID = {}; LEG3_STOPS.forEach(function (s) { LEG3_BY_ID[s.id] = s; });
   var WDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   var LAST_DAY = "2026-06-13"; // last day home (scenic leg)
@@ -140,6 +141,7 @@
   var activitiesBound = false; // bind the voting click handler only once
   var eatBound = false;        // bind the restaurant voting/filter handlers only once
   var scavengerBound = false;  // bind the scavenger click handler only once
+  var spinnerBound = false;    // bind the dinner-spinner click handler only once
   var PLATE_BONUS = 3;         // bonus points for holding the farthest-away license plate
   var renderedOnce = {};       // per-section guard: first render animates, re-renders reveal instantly
   /* every activity id a given person is currently "in" for, from the votes map */
@@ -260,8 +262,7 @@
         '</div><div class="tl-note">' + esc(s.note) + "</div></div>";
     }).join("");
     return '<h3 class="route-leg">Heading up · Sunday, June 7</h3>' +
-      '<p class="lead">' + esc(u.distanceMi) + " · " + esc(u.driveTime) + ". Suggested departure <strong>" + esc(u.departSuggested) +
-      "</strong> to clear the " + esc(u.checkIn) + " check-in with buffer.</p>" +
+      '<p class="lead">' + esc(u.distanceMi) + " · " + esc(u.driveTime) + ". Times below are suggested to clear the " + esc(u.checkIn) + " check-in with buffer.</p>" +
       '<div class="route-chips">' + chips + "</div>" +
       '<div class="timeline">' + stops +
       '<div class="tl-item"><div class="tl-when">' + esc(u.arrive) + " · Arrive Hochatown</div>" +
@@ -270,24 +271,34 @@
   }
   function scenicHomeHtml() {
     var days = SCENIC_HOME.map(function (d) {
-      var stops = d.stops.map(function (id) {
-        var s = LEG3_BY_ID[id]; if (!s) return "";
-        return '<p class="blurb"><strong>' + esc(s.name) + "</strong> <span class=\"muted\">· " + esc(s.region) +
-          "</span>" + (s.rating != null ? " " + ratingHtml(s) : "") + "<br><span class=\"notes\">" + esc(s.blurb) + " " + esc(s.notes) + "</span>" +
-          (s.priceDetail ? '<br><span class="price-detail">' + esc(s.priceDetail) + "</span>" : "") +
-          '<br>' + mapsAnchor(s) + "</p>";
+      var items = d.legs.map(function (leg) {
+        var s = leg.stop ? LEG3_BY_ID[leg.stop] : null, head, note;
+        if (s) {
+          head = esc(leg.arrive ? "Arrive " + s.name : s.name);
+          note = '<span class="muted">' + esc(s.region) + "</span>" +
+            (s.rating != null ? " " + ratingHtml(s) : "") +
+            "<br>" + esc(s.blurb) + " " + esc(s.notes) +
+            (s.priceDetail ? '<br><span class="price-detail">' + esc(s.priceDetail) + "</span>" : "") +
+            "<br>" + mapsAnchor(s);
+        } else {
+          head = esc(leg.label);
+          note = leg.note ? esc(leg.note) : "";
+        }
+        return '<div class="tl-item"><div class="tl-when">' + esc(leg.when) + " · " + head + "</div>" +
+          (note ? '<div class="tl-note">' + note + "</div>" : "") + "</div>";
       }).join("");
-      return '<div class="card reveal day"><div class="day-date"><div class="dow">' + d.dow + '</div><div class="dnum">' +
-        parseInt(d.date.slice(8, 10), 10) + '</div></div><div class="day-body"><h3>' + esc(d.title) + "</h3>" + stops +
-        (d.overnight ? '<p class="overnight">Overnight: ' + esc(d.overnight) + "</p>" : '<p class="overnight">Home sweet home</p>') +
-        "</div></div>";
+      var over = d.overnight
+        ? '<p class="overnight">Overnight: ' + esc(d.overnight) + "</p>"
+        : '<p class="overnight">Home sweet home</p>';
+      return '<h4 class="route-day">' + esc(d.dow) + " · " + esc(d.title) + "</h4>" +
+        '<div class="timeline">' + items + "</div>" + over;
     }).join("");
     var f = FORT_ROSALIE;
     var sidebar = '<div class="sidebar reveal"><h3>' + esc(f.title) + '</h3><p class="blurb">' + esc(f.body) +
       '</p><p class="notes">' + esc(f.hours) + ' · ' + mapsAnchor(f) + "</p><p class=\"footnote\">" + esc(f.footnote) + "</p></div>";
-    return '<h3 class="route-leg">The scenic way home · June 11–13</h3>' +
+    return '<h3 class="route-leg">The scenic way home · June 11\u201313</h3>' +
       '<p class="lead">Two nights, three states, and one stop that\u2019s just for us.</p>' +
-      '<div class="grid">' + days + "</div>" + sidebar;
+      days + sidebar;
   }
   function renderRoute() {
     var box = $("route"); if (!box) return;
@@ -310,7 +321,7 @@
   }
   function renderStay() {
     var plan = currentPlan();
-    var note = '<p class="plan-note">Auto-built from everyone\u2019s votes \u2014 vote in <strong>Activities</strong> and <strong>Where to Eat</strong> to reshape it. Days a place is closed are skipped automatically.</p>';
+    var note = '<p class="plan-note">Auto-built from everyone\u2019s votes \u2014 the top picks in <strong>Vote For What To Do</strong> and <strong>Vote For Where To Eat</strong> rise to the top of each day here. Days a place is closed are skipped automatically.</p>';
     $("stay").innerHTML = note + STAY_DAYS.map(function (d) { return dayCard(d, plan); }).join("");
     if (renderedOnce.stay) revealWithin($("stay")); else renderedOnce.stay = true;
   }
@@ -627,9 +638,9 @@
       scoreboardHtml(store) +
       '<p class="sc-howto">Everyone has their own card \u2014 tap your initial when you spot something. ' +
       "Works with no signal; it syncs when you\u2019re back on. \uD83D\uDC8E is worth the most.</p>" +
-      '<h3 class="sc-group">\uD83E\uDDD2 For the kids</h3>' +
-      kids.map(function (it) { return itemHtml(it, store); }).join("") +
-      '<h3 class="sc-group">\uD83C\uDF7B For the grown-ups</h3>' +
+      '<h3 class="sc-group">For the kids</h3>' +
+      kids.map(function (it) { return it.special === "plate" ? plateHtml(it, store) : itemHtml(it, store); }).join("") +
+      '<h3 class="sc-group">For the grown-ups</h3>' +
       adults.map(function (it) { return it.special === "plate" ? plateHtml(it, store) : itemHtml(it, store); }).join("");
 
     if (!scavengerBound) {
@@ -687,9 +698,16 @@
   function renderSpinner() {
     var pool = RESTAURANTS.filter(function (r) { return r.spin !== false; });
     var btn = $("spinBtn"), out = $("spinResult");
+    if (!btn || !out || spinnerBound) return;
+    spinnerBound = true;
+    var spinning = false;
     btn.addEventListener("click", function () {
-      var n = 0, max = 16;
+      if (spinning || !pool.length) return;
+      spinning = true;
+      btn.classList.add("spinning");
+      btn.setAttribute("aria-disabled", "true");
       out.classList.add("rolling");
+      var n = 0, max = 16;
       var iv = setInterval(function () {
         out.textContent = pool[Math.floor(Math.random() * pool.length)].name;
         if (++n >= max) {
@@ -699,6 +717,9 @@
           out.innerHTML = "Tonight: " +
             '<a class="dir spin-pick" href="' + mapsPlaceUrl(pick) + '" target="_blank" rel="noopener">' +
             esc(pick.name) + " \u2197</a>";
+          btn.classList.remove("spinning");
+          btn.removeAttribute("aria-disabled");
+          spinning = false;
         }
       }, 70);
     });
@@ -871,7 +892,7 @@
       for (var i = 0; i < rranked.length; i++) {
         if (rused[rranked[i].r.id]) continue;
         if (closedOnDow(rranked[i].r.hours, dow)) continue;
-        chosen = { name: rranked[i].r.name, kind: "out", n: rranked[i].n }; rused[rranked[i].r.id] = 1; break;
+        chosen = { name: rranked[i].r.name, id: rranked[i].r.id, kind: "out", n: rranked[i].n }; rused[rranked[i].r.id] = 1; break;
       }
       if (!chosen && ci < cabinDin.length) chosen = { name: cabinDin[ci++].name, kind: "cabin", n: 0 };
       if (!chosen) chosen = { name: "Grill / leftovers at the cabin", kind: "cabin", n: 0 };
@@ -892,9 +913,18 @@
     if (!m) return "";
     var parts = [];
     if (m.breakfast) parts.push("<strong>Breakfast:</strong> " + esc(m.breakfast.name));
-    if (m.dinner) parts.push("<strong>Dinner:</strong> " + esc(m.dinner.name) +
-      (m.dinner.kind === "out" ? ' <span class="vote-pick">★ voted</span>' : ""));
-    return parts.length ? '<p class="plan-eats">' + parts.join(" &nbsp;·&nbsp; ") + "</p>" : "";
+    if (m.dinner) {
+      var dn;
+      if (m.dinner.kind === "out" && REST_BY_ID[m.dinner.id]) {
+        var r = REST_BY_ID[m.dinner.id];
+        dn = '<a class="dir" href="' + mapsPlaceUrl(r) + '" target="_blank" rel="noopener">' +
+          esc(m.dinner.name) + ' <span class="vote-pick">\u2605 voted</span> \u2197</a>';
+      } else {
+        dn = esc(m.dinner.name);
+      }
+      parts.push("<strong>Dinner:</strong> " + dn);
+    }
+    return parts.length ? '<p class="plan-eats">' + parts.join(" &nbsp;\u00b7&nbsp; ") + "</p>" : "";
   }
 
   function buildPrintSheet() {

@@ -512,9 +512,12 @@ const DRIVE_UP = {
   departSuggested: "8:00 AM",
   path: ["Prairieville", "Central LA", "Shreveport area", "Texarkana", "US-259 N · Idabel", "Broken Bow", "Hochatown"],
   stops: [
+    { name: "Depart Prairieville", when: "8:00 AM", note: "Roll out early to clear the 4 PM check-in with buffer." },
     { name: "Morning coffee & stretch", when: "~9:30 AM", note: "First break out of the gate." },
-    { name: "Lunch — Shreveport area", when: "~12:00 PM", note: "Time-midpoint; let the kids run." },
-    { name: "Pruett's Food — final grocery", when: "~2:45 PM", note: "Stock the cabin on the way in (open 7am–10pm).", lat: 34.0250000, lng: -94.7380556, placeId: "ChIJAAAAANRqNYYRWSN2Chlm8rc", travelDay: true }
+    { name: "Lunch — Shreveport area", when: "~12:00 PM", note: "Time-midpoint; let the kids run before the long quiet stretch up US-259." },
+    { name: "Idabel — take the US-70 bypass", when: "~2:15 PM", note: "Heads up: at Idabel turn RIGHT onto the Hwy-70 bypass (near the Church of Christ), then at the next light (Catfish King / Road Runner) continue NORTH on US-259. Miss it and you head toward Hugo — adds about an hour." },
+    { name: "Love's — Broken Bow (fuel up)", when: "~2:40 PM", note: "Last reliable full-service fuel + clean restrooms before the cabin. Cell service gets spotty north of here and in the park, so top off and have this app loaded.", lat: 34.0224682, lng: -94.7398603, placeId: "ChIJXcK3k9lqNYYRBRQ_4S2eOw8", travelDay: true },
+    { name: "Pruett's Food — final grocery", when: "~2:45 PM", note: "Right next to Love's. Stock the cabin on the way in (open 7am–10pm).", lat: 34.0250000, lng: -94.7380556, placeId: "ChIJAAAAANRqNYYRWSN2Chlm8rc", travelDay: true }
   ],
   arrive: "~3:00 PM",
   checkIn: "4:00 PM"
@@ -592,9 +595,35 @@ const LEG3_STOPS = [
 ];
 
 const SCENIC_HOME = [
-  { date: "2026-06-11", dow: "Thu", title: "Crater of Diamonds → Hot Springs", stops: ["crater-of-diamonds", "hot-springs"], overnight: "Hot Springs, AR", notes: "Check out 10 AM. Crater ~1.5–2 hr away; Hot Springs ~1.5 hr past that." },
-  { date: "2026-06-12", dow: "Fri", title: "Hot Springs → Natchitoches", stops: ["natchitoches"], overnight: "Natchitoches, LA", notes: "~3–3.5 hr drive. Cane River, brick Front St, meat pies." },
-  { date: "2026-06-13", dow: "Sat", title: "Natchitoches → Fort Rosalie → home", stops: ["fort-rosalie"], overnight: null, notes: "~2 hr to Natchez, quick picnic stop, then ~2 hr home to Prairieville." }
+  {
+    date: "2026-06-11", dow: "Thu", title: "Crater of Diamonds → Hot Springs",
+    stops: ["crater-of-diamonds", "hot-springs"], overnight: "Hot Springs, AR",
+    notes: "Check out 10 AM. Crater ~1.5–2 hr away; Hot Springs ~1.5 hr past that.",
+    legs: [
+      { when: "10:00 AM", label: "Check out, depart Hochatown", note: "Pack the car the night before — 10 AM checkout comes fast." },
+      { when: "~11:45 AM", stop: "crater-of-diamonds" },
+      { when: "~3:00 PM", stop: "hot-springs", arrive: true }
+    ]
+  },
+  {
+    date: "2026-06-12", dow: "Fri", title: "Hot Springs → Natchitoches",
+    stops: ["natchitoches"], overnight: "Natchitoches, LA",
+    notes: "~3–3.5 hr drive. Cane River, brick Front St, meat pies.",
+    legs: [
+      { when: "~9:30 AM", label: "Depart Hot Springs" },
+      { when: "~1:00 PM", stop: "natchitoches", arrive: true }
+    ]
+  },
+  {
+    date: "2026-06-13", dow: "Sat", title: "Natchitoches → Fort Rosalie → home",
+    stops: ["fort-rosalie"], overnight: null,
+    notes: "~2 hr to Natchez, quick picnic stop, then ~2 hr home to Prairieville.",
+    legs: [
+      { when: "~9:30 AM", label: "Depart Natchitoches" },
+      { when: "~11:30 AM", stop: "fort-rosalie" },
+      { when: "~2:00 PM", label: "Home to Prairieville", note: "Door to door — welcome home." }
+    ]
+  }
 ];
 
 /* ============================================================================
@@ -644,7 +673,7 @@ const SCAVENGER_HUNT = [
   { icon: "assets/icons/scavenger/07.png", id: "turtle",          emoji: "🐢", label: "A turtle on a log",                           who: "kid",   points: 1 },
   { icon: "assets/icons/scavenger/08.png", id: "firefly",         emoji: "✨", label: "A firefly after dark",                        who: "kid",   points: 1 },
   { icon: "assets/icons/scavenger/09.png", id: "deer",            emoji: "🦌", label: "A deer",                                      who: "kid",   points: 1 },
-  { icon: "assets/icons/scavenger/10.png", id: "black-bear",      emoji: "🐻", label: "A black bear (Hochatown's mascot)",           who: "kid",   points: 1 },
+  { icon: "assets/icons/scavenger/10.png", id: "black-bear",      emoji: "🐻", label: "A black bear — real or carved",           who: "kid",   points: 1 },
   { icon: "assets/icons/scavenger/11.png", id: "bigfoot",         emoji: "🐾", label: "Bigfoot — sign, statue, or merch",            who: "kid",   points: 1 },
   { icon: "assets/icons/scavenger/12.png", id: "a-frame",         emoji: "🏠", label: "A giant A-frame cabin in the trees",          who: "kid",   points: 1 },
   { icon: "assets/icons/scavenger/13.png", id: "skip-rock",       emoji: "🪨", label: "Skip a rock across the water",                who: "kid",   points: 1 },
@@ -656,17 +685,17 @@ const SCAVENGER_HUNT = [
   { icon: "assets/icons/scavenger/19.png", id: "waterfowl",       emoji: "🦆", label: "A duck or pelican on the water",              who: "kid",   points: 1 },
 
   /* --- ADULT items (naughty & funny finds) --- */
-  { icon: "assets/icons/scavenger/20.png", id: "farthest-plate",  emoji: "🔢", label: "Farthest-away license plate — pick the state", who: "adult", points: 0, special: "plate" },
+  { icon: "assets/icons/scavenger/20.png", id: "farthest-plate",  emoji: "🔢", label: "Farthest-away license plate — pick the state", who: "kid",   points: 0, special: "plate" },
   { icon: "assets/icons/scavenger/21.png", id: "are-we-there",    emoji: "🗣️", label: "Catch someone saying \"are we there yet\"",    who: "adult", points: 1 },
-  { icon: "assets/icons/scavenger/22.png", id: "sticker-truck",   emoji: "🚚", label: "A truck buried in bumper stickers",           who: "adult", points: 1 },
+  { icon: "assets/icons/scavenger/22.png", id: "sticker-truck",   emoji: "🚚", label: "A truck covered in bumper stickers",           who: "adult", points: 1 },
   { icon: "assets/icons/scavenger/23.png", id: "day-drinker",     emoji: "🍺", label: "Someone day-drinking harder than you before noon", who: "adult", points: 1 },
   { icon: "assets/icons/scavenger/24.png", id: "church-sign",     emoji: "⛪", label: "A church sign with an accidental double meaning", who: "adult", points: 2 },
   { icon: "assets/icons/scavenger/25.png", id: "cabin-name",      emoji: "🏚️", label: "The most unhinged cabin name on the strip",   who: "adult", points: 1 },
-  { icon: "assets/icons/scavenger/26.png", id: "cursed-koozie",   emoji: "👕", label: "A koozie or shirt with a cursed slogan",       who: "adult", points: 1 },
+  { icon: "assets/icons/scavenger/26.png", id: "cursed-koozie",   emoji: "👕", label: "A koozie or shirt with an adult slogan",       who: "adult", points: 1 },
   { icon: "assets/icons/scavenger/27.png", id: "zero-bars",       emoji: "📵", label: "Your phone at zero bars — find the void",      who: "adult", points: 1 },
   { icon: "assets/icons/scavenger/28.png", id: "bathhouse-sign",  emoji: "🛁", label: "A 1900s bathhouse sign on Bathhouse Row",      who: "adult", points: 2 },
   { icon: "assets/icons/scavenger/29.png", id: "steel-magnolias", emoji: "🎬", label: "A \"Steel Magnolias\" filming spot in Natchitoches", who: "adult", points: 3 },
-  { icon: "assets/icons/scavenger/30.png", id: "mississippi-barge",emoji:"🚢", label: "A barge on the Mississippi at Natchez",        who: "adult", points: 1 },
+  { icon: "assets/icons/scavenger/30.png", id: "mississippi-barge",emoji:"🚢", label: "A barge or paddle wheeler on the Mississippi River",        who: "adult", points: 1 },
   { icon: "assets/icons/scavenger/31.png", id: "repropose-sunset",emoji: "🌅", label: "A sunset worth re-proposing over",            who: "adult", points: 1 },
   { icon: "assets/icons/scavenger/32.png", id: "fort-rosalie",    emoji: "⚜️", label: "The Fort Rosalie marker — your Mayeux ancestor's site", who: "adult", points: 2 }
 ];
