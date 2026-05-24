@@ -1031,36 +1031,63 @@
     scope.querySelectorAll(".reveal").forEach(function (el) { el.classList.add("in"); });
   }
   function bodyOf(det) { return det.querySelector(".acc-body"); }
+  var ACC_DUR = 300; // keep in sync with the .acc-body CSS height transition
 
-  function animateOpen(det) {
-    det.open = true;            // content must be in flow before we can measure it
-    revealWithin(det);
+  /* One animator for BOTH directions. The end state (det.open + cleaned-up
+     inline height) is reached by an idempotent finalize() that runs on
+     transitionend OR transitioncancel OR a timeout fallback — whichever comes
+     first. This is the fix for the "opens once, then won't reopen" bug: the
+     old code only flipped det.open inside the transitionend handler, so on any
+     device/build where that event doesn't fire (interrupted transition, mobile
+     compositor quirk, or a stale cached build), the section got stuck and could
+     never toggle again. Now the terminal state is guaranteed regardless. */
+  function animate(det, open) {
     var body = bodyOf(det);
-    if (!body || REDUCED) { syncToggleAll(); return; }
+    // Cancel anything already in flight on this section so taps can't pile up.
+    if (det._accT) { clearTimeout(det._accT); det._accT = null; }
+    if (det._accEnd && body) {
+      body.removeEventListener("transitionend", det._accEnd);
+      body.removeEventListener("transitioncancel", det._accEnd);
+    }
+    det._accEnd = null;
+
+    if (open) { det.open = true; revealWithin(det); } // must be in flow to measure / be visible
+
+    // No body, or reduced motion: snap to the end state, no animation.
+    if (!body || REDUCED) {
+      det.open = open;
+      if (body) { body.style.height = ""; body.classList.remove("acc-animating"); }
+      syncToggleAll();
+      return;
+    }
+
+    var full = body.scrollHeight;
     body.classList.add("acc-animating");
-    body.style.height = "0px";
-    var target = body.scrollHeight;
-    requestAnimationFrame(function () { body.style.height = target + "px"; });
-    body.addEventListener("transitionend", function te(e) {
-      if (e.propertyName !== "height") return;
-      body.style.height = ""; body.classList.remove("acc-animating");
-      body.removeEventListener("transitionend", te);
-    });
+    body.style.height = (open ? 0 : full) + "px";
+    void body.offsetHeight;                 // force the start value to commit before we change it
+
+    function finalize() {
+      if (det._accT) { clearTimeout(det._accT); det._accT = null; }
+      if (det._accEnd) {
+        body.removeEventListener("transitionend", det._accEnd);
+        body.removeEventListener("transitioncancel", det._accEnd);
+        det._accEnd = null;
+      }
+      det.open = open;                      // terminal state — guaranteed to run
+      body.style.height = "";
+      body.classList.remove("acc-animating");
+      syncToggleAll();
+    }
+    det._accEnd = function (e) { if (e.propertyName && e.propertyName !== "height") return; finalize(); };
+    body.addEventListener("transitionend", det._accEnd);
+    body.addEventListener("transitioncancel", det._accEnd);
+    det._accT = setTimeout(finalize, ACC_DUR + 80); // safety net if no transition event arrives
+
+    requestAnimationFrame(function () { body.style.height = (open ? full : 0) + "px"; });
     syncToggleAll();
   }
-  function animateClose(det) {
-    var body = bodyOf(det);
-    if (!body || REDUCED) { det.open = false; syncToggleAll(); return; }
-    body.classList.add("acc-animating");
-    body.style.height = body.scrollHeight + "px";
-    requestAnimationFrame(function () { body.style.height = "0px"; });
-    body.addEventListener("transitionend", function te(e) {
-      if (e.propertyName !== "height") return;
-      det.open = false; body.style.height = ""; body.classList.remove("acc-animating");
-      body.removeEventListener("transitionend", te);
-      syncToggleAll();
-    });
-  }
+  function animateOpen(det) { animate(det, true); }
+  function animateClose(det) { animate(det, false); }
   // Open the target section's <details> from nav / hash (animated).
   function openDetailsIn(target) {
     if (!target) return;
