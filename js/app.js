@@ -570,9 +570,24 @@
         '" data-person="' + esc(f.name) + '" title="' + esc(f.name) + '">' + esc(f.name.charAt(0)) + "</button>";
     }).join("");
   }
+  // Render the item's custom icon (assets/icons/scavenger/NN.png) when present,
+  // falling back to the emoji glyph when there is no icon OR the file fails to load
+  // (e.g. offline before the icon is cached by the service worker, #18).
+  function iconHtml(it) {
+    if (!it.icon) return '<div class="sc-emoji">' + it.emoji + "</div>";
+    return '<img class="sc-icon" src="' + it.icon + '" alt="" loading="lazy" ' +
+      'data-emoji="' + esc(it.emoji) + '" onerror="bbScIconFail(this)">';
+  }
+  // Inline-onerror target: swap a broken/uncached icon back to its emoji.
+  window.bbScIconFail = function (img) {
+    var d = document.createElement("div");
+    d.className = "sc-emoji";
+    d.textContent = img.getAttribute("data-emoji") || "";
+    img.replaceWith(d);
+  };
   function itemHtml(it, store) {
     var bonus = it.points > 1 ? '<span class="sc-bonus">+' + it.points + "</span>" : "";
-    return '<div class="sc-item"><div class="sc-emoji">' + it.emoji + "</div>" +
+    return '<div class="sc-item">' + iconHtml(it) +
       '<div class="sc-text"><span class="sc-label">' + esc(it.label) + "</span>" + bonus + "</div>" +
       '<div class="voters sc-finders">' + finderButtons(it, store) + "</div></div>";
   }
@@ -592,7 +607,7 @@
         (fp ? fp.code + " \u00b7 " + fp.mi.toLocaleString() + " mi" + lead : "\u2014") +
         ' <span class="sc-plate-n">(' + n + " seen)</span></li>";
     }).join("");
-    return '<div class="sc-item sc-plate"><div class="sc-emoji">' + it.emoji + "</div>" +
+    return '<div class="sc-item sc-plate">' + iconHtml(it) +
       '<div class="sc-text"><span class="sc-label">' + esc(it.label) + "</span>" +
       '<span class="sc-bonus">+' + PLATE_BONUS + " to the winner</span></div>" +
       '<div class="sc-plate-pick"><label class="sc-plate-hint">Saw a plate? Pick the state, then tap who spotted it:</label>' +
