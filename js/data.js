@@ -45,8 +45,8 @@ const TRIP = {
     vrboUrl: "https://www.vrbo.com/2831195",
     lat: 34.06484,
     lng: -94.75162,
-    placeId: null,                 // map pin only until the booking address arrives
-    address: null,                 // TODO: exact street address — from booking email
+    placeId: null,                 // no Place ID needed — Google resolves the street address cleanly
+    address: "116 Hickory Ridge Rd, Broken Bow, OK 74728",  // exact booking address (confirmed May 2026)
     travelDay: true,               // → Google Maps DIRECTIONS (not a place listing)
     blurb: "Private pool, hot tub, firepit, full kitchen, A/C, bunks. 10/10 over 55 reviews.",
     notes: "Just S of the Hochatown strip · ~10 min to attractions · ~5 min to Pruett's.",
@@ -329,6 +329,19 @@ const SWIM = [
     pickIf: "Pick this if you want a cold, clear river wade with the park's prettiest scenery — shallow edges for splashing and plenty of room if you walk a bit.",
     hours: { default: { open: "07:00", close: "20:00" }, label: "Daylight hours" },
     flags: ["cold (dam-fed)", "shallow edges", "water shoes", "parking pass ~$10"]
+  },
+  {
+    id: "presbyterian-falls", group: "river", warn: true,
+    name: "Presbyterian Falls",
+    lat: 34.0695547, lng: -94.624103,
+    placeId: null,                 // no verified Place ID — Maps falls back to name + coords
+    rating: null,
+    priceDetail: "Free · tribal land (Choctaw Nation)",
+    blurb: "A downstream stretch of the Lower Mountain Fork where the river braids over rock shelves into a run of cascading rapids and quiet pools \u2014 more a scenic spot for watching the current and rock-hopping than a gentle dip.",
+    notes: "Heads-up, and a real one: this is rapids, not a wade. There's genuine current and deeper pools between the rocks, and the rocks are slick (water shoes). It sits on Choctaw Nation land \u2014 heed any signage \u2014 with no cell service and no facilities. Getting in is either a short walk from riverside parking or a 2.4-mi moderate hike (350 ft gain), and parking fills in peak summer. Water runs cool here (~74\u00b0F downstream), not the ice-cold of the dam release. Best as an adults / older-kids adventure, NOT a Siena dip.",
+    pickIf: "Pick this if the adults and big kids want a scenic river adventure \u2014 cascades, rock ledges, and pools to explore \u2014 and you're set up to keep the littlest one well back from the current.",
+    hours: { default: { open: "08:00", close: "18:00" }, label: "Daylight hours \u00b7 ~8a\u20136p (seasonal)" },
+    flags: ["cool \u00b7 downstream", "rapids & pools \u2014 current", "rocky \u00b7 slippery", "tribal land \u00b7 respect signage"]
   }
 ];
 

@@ -62,7 +62,8 @@
     return base + encodeURIComponent(p.name + " " + p.lat + "," + p.lng);
   }
   function mapsDirUrl(p) {
-    var u = "https://www.google.com/maps/dir/?api=1&destination=" + p.lat + "," + p.lng;
+    var dest = p.address ? encodeURIComponent(p.address) : (p.lat + "," + p.lng);
+    var u = "https://www.google.com/maps/dir/?api=1&destination=" + dest;
     if (p.placeId) u += "&destination_place_id=" + p.placeId;
     return u;
   }
@@ -156,6 +157,14 @@
     $("roster").textContent = TRIP.family.map(function (f) { return f.name; }).join("  ·  ");
     $("tagline").textContent = TRIP.tagline;
     var b = $("banner"); if (b && typeof BANNER === "string") b.textContent = BANNER;
+    var hc = $("hero-cabin"), L = TRIP.lodging;
+    if (hc && L.address) {
+      hc.innerHTML =
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>' +
+        '<span>' + esc(L.address) + '</span>' +
+        '<span class="hc-sep" aria-hidden="true">·</span>' +
+        '<a class="dir" href="' + mapsDirUrl(L) + '" target="_blank" rel="noopener">Directions \u2197</a>';
+    }
   }
 
   /* --- live countdown (to departure → check-in → checkout) --- */
@@ -979,7 +988,7 @@
     sheet.innerHTML =
       "<h1>Broken Bow 2026 — The Plan</h1>" +
       "<p class='p-sub'>June 7–11 · Hochatown, OK · " + TRIP.family.map(function (f) { return f.name; }).join(", ") + "</p>" +
-      "<p class='p-sub'>Cabin pin: " + TRIP.lodging.lat + ", " + TRIP.lodging.lng + " (VRBO #" + TRIP.lodging.vrbo + ")</p>" +
+      "<p class='p-sub'>Cabin: " + (TRIP.lodging.address || (TRIP.lodging.lat + ", " + TRIP.lodging.lng)) + " (VRBO #" + TRIP.lodging.vrbo + ")</p>" +
       "<h2>The stay</h2><table class='p-table'>" + stayRows + "</table>" +
       "<h2>Voted activities</h2>" + votedHtml +
       "<h2>Cabin kitchen</h2>" + mealsHtml + "<div class='p-grocery'>" + groceryHtml + "</div>" +
@@ -1211,7 +1220,8 @@
       "stevens-gap":          { x: 118, y: 188 },
       "lake-beach-area":      { x: 158, y: 246 },
       "spillway-wade":        { x: 120, y: 322 },
-      "mountain-fork-access": { x: 176, y: 330 }
+      "mountain-fork-access": { x: 176, y: 330 },
+      "presbyterian-falls":   { x: 200, y: 346 }
     };
     var num = {}; SWIM.forEach(function (s, i) { num[s.id] = i + 1; });
     var dots = SWIM.map(function (s) {
@@ -1220,7 +1230,7 @@
         '<text x="' + p.x + '" y="' + (p.y + 4) + '" text-anchor="middle">' + num[s.id] + "</text></g>";
     }).join("");
     var lake  = '<path class="swim-water" d="M150 22 C196 40 182 92 172 130 C164 162 196 196 174 236 C160 264 172 280 150 286 C128 280 140 264 126 236 C104 196 136 162 128 130 C118 92 104 40 150 22 Z"/>';
-    var river = '<path class="swim-river-line" d="M150 286 C150 300 130 306 122 316 M150 286 C150 302 170 312 176 324"/>';
+    var river = '<path class="swim-river-line" d="M150 286 C150 300 130 306 122 316 M150 286 C150 302 170 312 176 324 M176 324 C186 332 192 338 200 346"/>';
     var dam   = '<line class="swim-dam" x1="132" y1="288" x2="168" y2="288"/><text class="swim-cap" x="150" y="303" text-anchor="middle">dam</text>';
     var comp  = '<text class="swim-n" x="278" y="24" text-anchor="middle">N</text><path class="swim-n-arrow" d="M278 28 l-4 9 h8 z"/>';
     var svg =
