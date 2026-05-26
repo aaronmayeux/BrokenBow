@@ -233,38 +233,6 @@ const ACTIVITIES = [
 
   /* ---- NEW: calm, shallow water + easy trail (toddler-friendly) ---- */
   {
-    id: "lake-beach-area",
-    name: "Broken Bow Lake — Beach Area",
-    category: "Outdoors",
-    lat: 34.1386441, lng: -94.6883223,
-    placeId: "ChIJTbXwdCc_NYYROeMfSL2skL4",
-    rating: 4.6, ratingCount: 284,
-    priceTier: null, priceDetail: "Free",
-    blurb: "A calm lake swim area that's basically a big shallow pool — sandy/grassy edge, no river current, restrooms and showers right there.",
-    notes: "Free life jackets for swimmers. Come before midday on weekends for a shady table. Dog-friendly.",
-    pickIf: "Pick this if you want the easiest water day of the trip — a free, calm swim beach that's basically a big shallow pool, with showers and free life jackets for the little ones.",
-    hours: { alwaysOpen: true, label: "Open 24h · swim in daylight", default: { open: "06:00", close: "21:00" } },
-    flags: ["free", "calm/shallow", "showers + life jackets"],
-    tags: ["swim", "lake", "kids", "free"],
-    votable: true, defaultDay: null
-  },
-  {
-    id: "spillway-wade",
-    name: "Spillway Overlook & River Wade",
-    category: "Outdoors",
-    lat: 34.1571701, lng: -94.7053839,
-    placeId: "ChIJvYO-JMo4NYYRMTQMmzUVAKs",
-    rating: 4.8, ratingCount: 169,
-    priceTier: null, priceDetail: "Free",
-    blurb: "Clear, cold, shin-deep water below the dam with a short path down to the river's edge — the lazy-creek wade spot. Big rocks to perch on, easy splashing.",
-    notes: "Water is cold (dam release) and rocks are slick — water shoes help. Anglers fish nearby; keep the rock-throwing away from them.",
-    pickIf: "Pick this if you feel like a lazy wade in clear, shin-deep water — a short path leads right to the river's edge, perfect for letting Siena splash while the big kids hunt for rocks.",
-    hours: { alwaysOpen: true, label: "Open 24h · daylight best", default: { open: "06:00", close: "20:00" } },
-    flags: ["free", "shallow wading", "water shoes"],
-    tags: ["wade", "river", "kids", "free"],
-    votable: true, defaultDay: null
-  },
-  {
     id: "beaver-lodge-trail",
     name: "Beaver Lodge Nature Trail",
     category: "Outdoors",
@@ -281,6 +249,89 @@ const ACTIVITIES = [
     votable: true, defaultDay: null
   }
 ];
+
+/* ============================================================================
+   SWIM & WADE (6) — guide section (NOT votable). Warm lake vs cold river.
+   Schema mirrors activity/restaurant cards (id/name/coords/placeId/rating/
+   blurb/notes/pickIf/hours/flags). group = "lake" | "river". warn = heads-up
+   card (rough access). Place IDs verified via Google Places (May 2026).
+   lake-beach-area + spillway-wade were MOVED here out of ACTIVITIES.
+   ========================================================================== */
+const SWIM = [
+  {
+    id: "lake-beach-area", group: "lake",
+    name: "Broken Bow Lake — Beach Area",
+    lat: 34.1386441, lng: -94.6883223,
+    placeId: "ChIJTbXwdCc_NYYROeMfSL2skL4",
+    rating: 4.6, ratingCount: 284, priceDetail: "Free",
+    blurb: "A calm lake swim area that's basically a big shallow pool — sandy/grassy edge, no river current, restrooms and showers right there.",
+    notes: "Free life jackets for swimmers. Come before midday on weekends for a shady table. Warm water in June. Dog-friendly.",
+    pickIf: "Pick this if you want the easiest water day of the trip — a free, calm, warm swim beach that's basically a big shallow pool, with showers and free life jackets for the little ones.",
+    hours: { alwaysOpen: true, label: "Open 24h · swim in daylight", default: { open: "06:00", close: "21:00" } },
+    flags: ["warm", "calm / shallow", "showers + life jackets", "free"]
+  },
+  {
+    id: "stevens-gap", group: "lake",
+    name: "Stevens Gap Swim Beach (Coyote Drive)",
+    lat: 34.1663564, lng: -94.7172451,
+    placeId: "ChIJtS3S0qQ4NYYRqqzr2bRru58",
+    rating: 4.6, ratingCount: 305, priceDetail: "Free · state-park parking pass for some lots",
+    blurb: "The lake's main designated swim beach off Hwy 259 — open water with a beach edge, plus a little playground and kayak / paddleboard / tube rentals right on the water.",
+    notes: "Water drops off past the shallows, so keep Siena at the edge and supervise the big kids. Rocky shore — bring chairs + water shoes. Busiest of the lake spots but rarely overcrowded; rentals run about $28 the first hour.",
+    pickIf: "Pick this if you want the easiest beach day with a backup plan — a real swim beach, a playground a few steps away, and rentals if the big kids get restless.",
+    hours: { alwaysOpen: true, label: "Open 24h · daylight best", default: { open: "06:00", close: "21:00" } },
+    flags: ["warm", "beach + playground", "drops off — supervise", "rentals on-site"]
+  },
+  {
+    id: "carson-creek", group: "lake",
+    name: "Carson Creek Recreation Area",
+    lat: 34.1774081, lng: -94.7287298,
+    placeId: "ChIJdUdYwWFHNYYRA3Fj9FgXbRg",
+    rating: 4.7, ratingCount: 81, priceDetail: "Free · camping fees for sites",
+    blurb: "A quiet recreation area on the lake's western shore (the Quail / Turkey / Hawk camps). Swim, fish, or wade straight off the shoreline, with a small playground by the water.",
+    notes: "Rocky entry — water shoes and a chair help. Scout a gently sloping cove edge for Siena rather than stepping off the rocks. Much calmer scene than the main beach; there's a boat ramp nearby, so watch for boats.",
+    pickIf: "Pick this if you want a quieter, local-feeling lake swim with a playground — find a shallow cove edge and you'll likely have a patch of shoreline to yourselves.",
+    hours: { alwaysOpen: true, label: "Open 24h · daylight best", default: { open: "06:00", close: "21:00" } },
+    flags: ["warm", "quiet", "playground", "rocky entry — water shoes"]
+  },
+  {
+    id: "holly-creek", group: "lake", warn: true,
+    name: "Holly Creek (north end)",
+    lat: 34.2775523, lng: -94.6860723,
+    placeId: "ChIJ85xjgQc3NYYRBcgJ-33dWNs",
+    rating: 4.1, ratingCount: 28, priceDetail: "Free · primitive (no facilities)",
+    blurb: "The secluded north-end spot — a quiet peninsula where you can have the shoreline almost entirely to yourselves. This is the genuine \"void of tourists\" pick.",
+    notes: "Heads-up, and it's a real one: the way in is a long, rough, washed-out dirt road (high-clearance helps), there is NO cell service, and there are no restrooms, water, or showers — pack everything in and back out. Best as an adults-scout-first / older-kids adventure, not a quick toddler dip.",
+    pickIf: "Pick this if you truly want \"void of tourists\" and don't mind earning it — a remote, primitive north-end shoreline with near-total quiet. Come self-sufficient.",
+    hours: { alwaysOpen: true, label: "Open 24h · daylight only — no lights, no cell", default: { open: "07:00", close: "19:00" } },
+    flags: ["warm", "most secluded", "rough road · no cell", "no facilities"]
+  },
+  {
+    id: "spillway-wade", group: "river",
+    name: "Spillway Overlook & River Wade",
+    lat: 34.1571701, lng: -94.7053839,
+    placeId: "ChIJvYO-JMo4NYYRMTQMmzUVAKs",
+    rating: 4.8, ratingCount: 169, priceDetail: "Free",
+    blurb: "Clear, cold, shin-deep water below the dam with a short path down to the river's edge — the lazy-creek wade spot. Big rocks to perch on, easy splashing.",
+    notes: "Water is cold (dam release) and rocks are slick — water shoes help. Anglers fish nearby; keep the rock-throwing away from them.",
+    pickIf: "Pick this if you feel like a lazy wade in clear, shin-deep water — a short path leads right to the river's edge, perfect for letting Siena splash while the big kids hunt for rocks.",
+    hours: { alwaysOpen: true, label: "Open 24h · daylight best", default: { open: "06:00", close: "20:00" } },
+    flags: ["cold (dam release)", "shin-deep wade", "water shoes", "free"]
+  },
+  {
+    id: "mountain-fork-access", group: "river",
+    name: "Mountain Fork River — in-park access",
+    lat: 34.1370192, lng: -94.6839306,
+    placeId: "ChIJI785oq8_NYYR3_Jf2QNKUJs",
+    rating: 4.9, ratingCount: 16, priceDetail: "State-park parking pass ~$10",
+    blurb: "A quieter river access inside the park, away from the main swim beach — clear, cold water with shallow stretches to wade and rocks to hop between.",
+    notes: "Cold (dam-fed) and the rocks are slick, so water shoes. Trout anglers wade here too — give them room. Walk a little from any busy spot and you'll find your own pool.",
+    pickIf: "Pick this if you want a cold, clear river wade with the park's prettiest scenery — shallow edges for splashing and plenty of room if you walk a bit.",
+    hours: { default: { open: "07:00", close: "20:00" }, label: "Daylight hours" },
+    flags: ["cold (dam-fed)", "shallow edges", "water shoes", "parking pass ~$10"]
+  }
+];
+
 
 /* ============================================================================
    RESTAURANTS (12) — hours best-effort (May 2026 snapshot); callAhead = volatile.

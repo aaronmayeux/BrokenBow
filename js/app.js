@@ -1187,6 +1187,68 @@
     document.querySelectorAll(".reveal").forEach(function (el) { io.observe(el); });
   }
 
+  /* --- swim & wade: GUIDE section (not votable). Cards reuse the shared card
+     helpers (rating/hours/flags/pickIf); swim spots were moved out of ACTIVITIES
+     so they no longer feed the vote-driven itinerary. Includes an offline,
+     inline-SVG orientation sketch (themed via currentColor; NOT to scale) whose
+     legend deep-links each spot's real Place ID. -------------------------------- */
+  function swimCard(p) {
+    var groupTag = '<span class="tag cat ' + (p.group === "river" ? "cat-indoors" : "cat-outdoors") + '">' +
+      (p.group === "river" ? "River wade" : "Lake swim") + "</span>";
+    return '<article class="card swim reveal swim-' + p.group + (p.warn ? " swim-warn" : "") + '">' +
+      '<div class="card-head"><h3>' + esc(p.name) + "</h3>" + ratingHtml(p) + "</div>" +
+      '<div class="tags">' + groupTag + hoursTags(p.hours) + "</div>" +
+      '<div class="tags flags-row">' + flagTags(p) + "</div>" +
+      '<p class="blurb">' + esc(p.blurb) + '</p><p class="notes">' + esc(p.notes) + "</p>" +
+      priceDetailHtml(p) + pickIfHtml(p) +
+      '<a class="dir" href="' + mapsPlaceUrl(p) + '" target="_blank" rel="noopener">View on Maps \u2197</a></article>';
+  }
+
+  function swimMapSvg() {
+    var POS = {
+      "holly-creek":          { x: 150, y: 40  },
+      "carson-creek":         { x: 106, y: 120 },
+      "stevens-gap":          { x: 118, y: 188 },
+      "lake-beach-area":      { x: 158, y: 246 },
+      "spillway-wade":        { x: 120, y: 322 },
+      "mountain-fork-access": { x: 176, y: 330 }
+    };
+    var num = {}; SWIM.forEach(function (s, i) { num[s.id] = i + 1; });
+    var dots = SWIM.map(function (s) {
+      var p = POS[s.id]; if (!p) return "";
+      return '<g class="swim-dot"><circle cx="' + p.x + '" cy="' + p.y + '" r="11"/>' +
+        '<text x="' + p.x + '" y="' + (p.y + 4) + '" text-anchor="middle">' + num[s.id] + "</text></g>";
+    }).join("");
+    var lake  = '<path class="swim-water" d="M150 22 C196 40 182 92 172 130 C164 162 196 196 174 236 C160 264 172 280 150 286 C128 280 140 264 126 236 C104 196 136 162 128 130 C118 92 104 40 150 22 Z"/>';
+    var river = '<path class="swim-river-line" d="M150 286 C150 300 130 306 122 316 M150 286 C150 302 170 312 176 324"/>';
+    var dam   = '<line class="swim-dam" x1="132" y1="288" x2="168" y2="288"/><text class="swim-cap" x="150" y="303" text-anchor="middle">dam</text>';
+    var comp  = '<text class="swim-n" x="278" y="24" text-anchor="middle">N</text><path class="swim-n-arrow" d="M278 28 l-4 9 h8 z"/>';
+    var svg =
+      '<svg class="swim-map-svg" viewBox="0 0 300 358" role="img" aria-label="Orientation sketch of swim spots around Broken Bow Lake \u2014 not to scale">' +
+      '<text class="swim-title" x="150" y="13" text-anchor="middle">Broken Bow Lake \u2014 orientation sketch</text>' +
+      lake + river + dam + comp + dots + "</svg>";
+    var legend = '<ol class="swim-legend">' + SWIM.map(function (s) {
+      return '<li><span class="swim-leg-n">' + num[s.id] + "</span>" +
+        '<a href="' + mapsPlaceUrl(s) + '" target="_blank" rel="noopener">' + esc(s.name) + " \u2197</a></li>";
+    }).join("") + "</ol>";
+    return '<figure class="swim-map">' + svg + legend +
+      '<figcaption class="swim-map-cap">Not to scale \u2014 a rough layout to get your bearings. ' +
+      'Tap a name for its exact pin, and download the Broken Bow area in Google Maps first so it navigates with no signal.</figcaption></figure>';
+  }
+
+  function renderSwim() {
+    var box = $("swim"); if (!box || typeof SWIM === "undefined") return;
+    var lake  = SWIM.filter(function (s) { return s.group === "lake"; });
+    var river = SWIM.filter(function (s) { return s.group === "river"; });
+    box.innerHTML =
+      '<p class="lead">Every spot here welcomes a wade with Siena. You can legally swim anywhere along the shoreline \u2014 these are just the calmest, least-crowded edges. ' +
+      'The <strong>lake runs warm</strong> in June; the <strong>river below the dam runs ice-cold</strong> year-round. Lake shores drop off, so pick a gently sloping cove edge for the little one and bring water shoes.</p>' +
+      swimMapSvg() +
+      '<h3 class="swim-group">Warm lake swims</h3><div class="grid">' + lake.map(swimCard).join("") + "</div>" +
+      '<h3 class="swim-group">Cold river wades</h3><div class="grid">' + river.map(swimCard).join("") + "</div>";
+    if (renderedOnce.swim) revealWithin($("swim")); else renderedOnce.swim = true;
+  }
+
   /* --- maps & resources: simple link-out cards (content lives in RESOURCES) - */
   function renderResources() {
     var box = $("resources"); if (!box || typeof RESOURCES === "undefined") return;
@@ -1297,6 +1359,7 @@
     safe(renderActivities);
     safe(initSync);
     safe(renderEat);
+    safe(renderSwim);
     safe(renderShop);
     safe(renderKitchen);
     safe(renderPacking);
