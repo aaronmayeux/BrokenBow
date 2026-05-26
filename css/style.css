@@ -115,6 +115,13 @@ html.js .reveal.in { opacity: 1; transform: none; }
 .roster {
   margin-top: 16px; font-size: 14px; letter-spacing: .04em; color: var(--muted);
 }
+.hero-cabin {
+  margin-top: 12px; font-size: 13px; color: var(--muted);
+  display: flex; align-items: center; justify-content: center; gap: 7px; flex-wrap: wrap;
+}
+.hero-cabin svg { width: 15px; height: 15px; fill: var(--brand-2); flex: none; }
+.hero-cabin .hc-sep { color: var(--line); }
+.hero-cabin .dir { font-size: 13px; }
 
 /* ---------- countdown ---------- */
 .countdown {
